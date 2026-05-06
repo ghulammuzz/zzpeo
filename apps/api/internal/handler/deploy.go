@@ -16,7 +16,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/valyala/fasthttp"
 )
 
@@ -93,20 +92,26 @@ var activeServices sync.Map
 
 // DeployHandler wires deploy-related routes.
 type DeployHandler struct {
-	svcRepo    *repository.ServiceRepository
-	serverRepo *repository.ServerRepository
-	deployRepo *repository.DeploymentRepository
-	evsRepo    *repository.EnvVarSetRepository
+	svcRepo    repository.ServiceRepo
+	serverRepo repository.ServerRepo
+	deployRepo repository.DeploymentRepo
+	evsRepo    repository.EnvVarSetRepo
 	ks         *appssh.KeyStore
 }
 
-// NewDeployHandler wires up a DeployHandler.
-func NewDeployHandler(db *pgxpool.Pool, ks *appssh.KeyStore) *DeployHandler {
+// NewDeployHandler wires up a DeployHandler with injected repos.
+func NewDeployHandler(
+	svcRepo repository.ServiceRepo,
+	serverRepo repository.ServerRepo,
+	deployRepo repository.DeploymentRepo,
+	evsRepo repository.EnvVarSetRepo,
+	ks *appssh.KeyStore,
+) *DeployHandler {
 	return &DeployHandler{
-		svcRepo:    repository.NewServiceRepository(db),
-		serverRepo: repository.NewServerRepository(db),
-		deployRepo: repository.NewDeploymentRepository(db),
-		evsRepo:    repository.NewEnvVarSetRepository(db),
+		svcRepo:    svcRepo,
+		serverRepo: serverRepo,
+		deployRepo: deployRepo,
+		evsRepo:    evsRepo,
 		ks:         ks,
 	}
 }

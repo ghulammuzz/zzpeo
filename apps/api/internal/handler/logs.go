@@ -15,24 +15,19 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/valyala/fasthttp"
 )
 
 // LogsHandler streams live service logs over SSE.
 type LogsHandler struct {
-	svcRepo    *repository.ServiceRepository
-	serverRepo *repository.ServerRepository
+	svcRepo    repository.ServiceRepo
+	serverRepo repository.ServerRepo
 	ks         *appssh.KeyStore
 }
 
-// NewLogsHandler wires up a LogsHandler.
-func NewLogsHandler(db *pgxpool.Pool, ks *appssh.KeyStore) *LogsHandler {
-	return &LogsHandler{
-		svcRepo:    repository.NewServiceRepository(db),
-		serverRepo: repository.NewServerRepository(db),
-		ks:         ks,
-	}
+// NewLogsHandler wires up a LogsHandler with injected repos.
+func NewLogsHandler(svcRepo repository.ServiceRepo, serverRepo repository.ServerRepo, ks *appssh.KeyStore) *LogsHandler {
+	return &LogsHandler{svcRepo: svcRepo, serverRepo: serverRepo, ks: ks}
 }
 
 // LogConfig is stored as JSONB in services.log_config.

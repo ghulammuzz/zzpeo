@@ -8,17 +8,16 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // ObjectHandler handles all object-related routes.
 type ObjectHandler struct {
-	repo *repository.ObjectRepository
+	repo repository.ObjectRepo
 }
 
-// NewObjectHandler wires up an ObjectHandler.
-func NewObjectHandler(db *pgxpool.Pool) *ObjectHandler {
-	return &ObjectHandler{repo: repository.NewObjectRepository(db)}
+// NewObjectHandler wires up an ObjectHandler with the given repo.
+func NewObjectHandler(repo repository.ObjectRepo) *ObjectHandler {
+	return &ObjectHandler{repo: repo}
 }
 
 // List handles GET /environments/:envId/objects

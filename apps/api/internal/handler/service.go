@@ -11,18 +11,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // ServiceHandler handles all service-related routes.
 type ServiceHandler struct {
-	repo *repository.ServiceRepository
+	repo repository.ServiceRepo
 	ks   *appssh.KeyStore
 }
 
-// NewServiceHandler wires up a ServiceHandler.
-func NewServiceHandler(db *pgxpool.Pool, ks *appssh.KeyStore) *ServiceHandler {
-	return &ServiceHandler{repo: repository.NewServiceRepository(db), ks: ks}
+// NewServiceHandler wires up a ServiceHandler with the given repo.
+func NewServiceHandler(repo repository.ServiceRepo, ks *appssh.KeyStore) *ServiceHandler {
+	return &ServiceHandler{repo: repo, ks: ks}
 }
 
 // List handles GET /servers/:serverId/services

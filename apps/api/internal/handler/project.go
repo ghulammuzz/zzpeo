@@ -8,17 +8,16 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // ProjectHandler handles all /projects/* routes.
 type ProjectHandler struct {
-	repo *repository.ProjectRepository
+	repo repository.ProjectRepo
 }
 
-// NewProjectHandler wires up a ProjectHandler backed by the given pool.
-func NewProjectHandler(db *pgxpool.Pool) *ProjectHandler {
-	return &ProjectHandler{repo: repository.NewProjectRepository(db)}
+// NewProjectHandler wires up a ProjectHandler with the given repo.
+func NewProjectHandler(repo repository.ProjectRepo) *ProjectHandler {
+	return &ProjectHandler{repo: repo}
 }
 
 // List handles GET /projects

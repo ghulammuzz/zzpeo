@@ -3,16 +3,15 @@ package handler
 import (
 	"github.com/ghulammuzz/zzpeo/api/internal/repository"
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // GlobalHandler handles global list endpoints used by the sidebar.
 type GlobalHandler struct {
-	repo *repository.GlobalRepository
+	repo repository.GlobalRepo
 }
 
-func NewGlobalHandler(db *pgxpool.Pool) *GlobalHandler {
-	return &GlobalHandler{repo: repository.NewGlobalRepository(db)}
+func NewGlobalHandler(repo repository.GlobalRepo) *GlobalHandler {
+	return &GlobalHandler{repo: repo}
 }
 
 // ListServers handles GET /servers

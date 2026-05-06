@@ -10,22 +10,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // EnvVarSetHandler handles routes for global env var sets.
 type EnvVarSetHandler struct {
-	repo    *repository.EnvVarSetRepository
+	repo    repository.EnvVarSetRepo
 	ks      *appssh.KeyStore
-	svcRepo *repository.ServiceRepository
+	svcRepo repository.ServiceRepo
 }
 
-func NewEnvVarSetHandler(db *pgxpool.Pool, ks *appssh.KeyStore) *EnvVarSetHandler {
-	return &EnvVarSetHandler{
-		repo:    repository.NewEnvVarSetRepository(db),
-		ks:      ks,
-		svcRepo: repository.NewServiceRepository(db),
-	}
+func NewEnvVarSetHandler(repo repository.EnvVarSetRepo, svcRepo repository.ServiceRepo, ks *appssh.KeyStore) *EnvVarSetHandler {
+	return &EnvVarSetHandler{repo: repo, ks: ks, svcRepo: svcRepo}
 }
 
 // List handles GET /env-var-sets

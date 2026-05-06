@@ -10,21 +10,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // EnvironmentHandler handles environment and env-var routes.
 type EnvironmentHandler struct {
-	repo *repository.EnvironmentRepository
+	repo repository.EnvironmentRepo
 	ks   *appssh.KeyStore
 }
 
-// NewEnvironmentHandler wires up an EnvironmentHandler.
-func NewEnvironmentHandler(db *pgxpool.Pool, ks *appssh.KeyStore) *EnvironmentHandler {
-	return &EnvironmentHandler{
-		repo: repository.NewEnvironmentRepository(db),
-		ks:   ks,
-	}
+// NewEnvironmentHandler wires up an EnvironmentHandler with the given repo.
+func NewEnvironmentHandler(repo repository.EnvironmentRepo, ks *appssh.KeyStore) *EnvironmentHandler {
+	return &EnvironmentHandler{repo: repo, ks: ks}
 }
 
 // ---------------------------------------------------------------------------

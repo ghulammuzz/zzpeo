@@ -10,21 +10,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // NginxHandler handles nginx-inspection routes.
 type NginxHandler struct {
-	serverRepo *repository.ServerRepository
+	serverRepo repository.ServerRepo
 	ks         *appssh.KeyStore
 }
 
-// NewNginxHandler wires up a NginxHandler.
-func NewNginxHandler(db *pgxpool.Pool, ks *appssh.KeyStore) *NginxHandler {
-	return &NginxHandler{
-		serverRepo: repository.NewServerRepository(db),
-		ks:         ks,
-	}
+// NewNginxHandler wires up a NginxHandler with the given repo.
+func NewNginxHandler(serverRepo repository.ServerRepo, ks *appssh.KeyStore) *NginxHandler {
+	return &NginxHandler{serverRepo: serverRepo, ks: ks}
 }
 
 // GetNginxConfig handles GET /servers/:serverId/nginx

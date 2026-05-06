@@ -9,22 +9,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // GitHandler handles git info and git pull operations for services.
 type GitHandler struct {
-	svcRepo    *repository.ServiceRepository
-	serverRepo *repository.ServerRepository
+	svcRepo    repository.ServiceRepo
+	serverRepo repository.ServerRepo
 	ks         *appssh.KeyStore
 }
 
-func NewGitHandler(db *pgxpool.Pool, ks *appssh.KeyStore) *GitHandler {
-	return &GitHandler{
-		svcRepo:    repository.NewServiceRepository(db),
-		serverRepo: repository.NewServerRepository(db),
-		ks:         ks,
-	}
+func NewGitHandler(svcRepo repository.ServiceRepo, serverRepo repository.ServerRepo, ks *appssh.KeyStore) *GitHandler {
+	return &GitHandler{svcRepo: svcRepo, serverRepo: serverRepo, ks: ks}
 }
 
 // GitInfo handles GET /services/:serviceId/git-info
