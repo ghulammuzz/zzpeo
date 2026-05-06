@@ -46,6 +46,7 @@ type createServiceRequest struct {
 	Workdir      string          `json:"workdir"`
 	RunAsUser    *string         `json:"run_as_user"`
 	LocalPort    *int            `json:"local_port"`
+	Domain       *string         `json:"domain"`
 	LogConfig    json.RawMessage `json:"log_config"`
 	DeployType   string          `json:"deploy_type"`
 	DeployConfig json.RawMessage `json:"deploy_config"`
@@ -72,6 +73,7 @@ func (h *ServiceHandler) Create(c *fiber.Ctx) error {
 		Workdir:      req.Workdir,
 		RunAsUser:    req.RunAsUser,
 		LocalPort:    req.LocalPort,
+		Domain:       req.Domain,
 		LogConfig:    json.RawMessage(req.LogConfig),
 		DeployType:   model.DeployType(req.DeployType),
 		DeployConfig: json.RawMessage(req.DeployConfig),
@@ -104,6 +106,7 @@ type updateServiceRequest struct {
 	Workdir      string          `json:"workdir"`
 	RunAsUser    *string         `json:"run_as_user"`
 	LocalPort    *int            `json:"local_port"`
+	Domain       *string         `json:"domain"`
 	LogConfig    json.RawMessage `json:"log_config"`
 	DeployType   string          `json:"deploy_type"`
 	DeployConfig json.RawMessage `json:"deploy_config"`
@@ -126,6 +129,7 @@ func (h *ServiceHandler) Update(c *fiber.Ctx) error {
 		Workdir:      req.Workdir,
 		RunAsUser:    req.RunAsUser,
 		LocalPort:    req.LocalPort,
+		Domain:       req.Domain,
 		LogConfig:    json.RawMessage(req.LogConfig),
 		DeployType:   model.DeployType(req.DeployType),
 		DeployConfig: json.RawMessage(req.DeployConfig),

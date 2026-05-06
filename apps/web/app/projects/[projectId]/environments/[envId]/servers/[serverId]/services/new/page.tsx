@@ -72,6 +72,7 @@ export default function ServiceNewPage({ params }: PageProps) {
   const [workdir, setWorkdir] = useState("");
   const [runAsUser, setRunAsUser] = useState("");
   const [localPort, setLocalPort] = useState("");
+  const [domain, setDomain] = useState("");
   const [logConfig, setLogConfig] = useState<LogConfig | undefined>(undefined);
   const [deployType, setDeployType] = useState<DeployType>("php");
   const [deployConfig, setDeployConfig] = useState<unknown>({
@@ -161,6 +162,7 @@ export default function ServiceNewPage({ params }: PageProps) {
         workdir,
         run_as_user: runAsUser || undefined,
         local_port: localPort ? parseInt(localPort) : undefined,
+        domain: domain || undefined,
         log_config: logConfig ?? null,
         deploy_type: deployType,
         deploy_config: deployConfig,
@@ -258,6 +260,23 @@ export default function ServiceNewPage({ params }: PageProps) {
               />
               <p className="text-xs text-muted-foreground">
                 Port this service listens on locally. Used to link nginx proxy_pass to this service in the traffic flow diagram.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="domain">
+                Domain{" "}
+                <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <Input
+                id="domain"
+                placeholder="app.example.com"
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground">
+                Domain or subdomain associated with this service.
               </p>
             </div>
 

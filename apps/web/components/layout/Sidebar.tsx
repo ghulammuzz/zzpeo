@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { api } from "@/lib/api"
 import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
   FolderKanban, Globe, Server, Terminal, Package,
   Rocket, ChevronLeft, ChevronRight, X, Plus, KeyRound,
 } from "lucide-react"
@@ -291,37 +294,51 @@ export function Sidebar() {
   return (
     <aside className="flex h-screen flex-shrink-0 border-r bg-background overflow-hidden">
       {/* Activity strip */}
+      <TooltipProvider delayDuration={400}>
       <div className="flex w-12 flex-shrink-0 flex-col items-center border-r bg-background py-2 gap-0.5">
         {/* Logo */}
-        <Link
-          href="/projects"
-          className="flex h-10 w-10 items-center justify-center rounded-md mb-2"
-          title="zzpeo"
-        >
-          <Rocket className="h-5 w-5 text-primary" />
-        </Link>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link
+              href="/projects"
+              className="flex h-10 w-10 items-center justify-center rounded-md mb-2"
+            >
+              <Rocket className="h-5 w-5 text-primary" />
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent side="right">Home</TooltipContent>
+        </Tooltip>
 
         {/* Tab icons */}
         {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => toggle(tab.key)}
-            title={tab.label}
-            className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-md transition-colors",
-              activeTab === tab.key
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            {tab.icon}
-          </button>
+          <Tooltip key={tab.key}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => toggle(tab.key)}
+                className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-md transition-colors",
+                  activeTab === tab.key
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                {tab.icon}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">{tab.label}</TooltipContent>
+          </Tooltip>
         ))}
 
         {/* Spacer + theme toggle at bottom */}
         <div className="flex-1" />
-        <ThemeToggle />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div><ThemeToggle /></div>
+          </TooltipTrigger>
+          <TooltipContent side="right">Toggle theme</TooltipContent>
+        </Tooltip>
       </div>
+      </TooltipProvider>
 
       {/* Slide-out panel */}
       <div

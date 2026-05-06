@@ -62,6 +62,7 @@ export interface Service {
   workdir: string;
   run_as_user?: string;
   local_port?: number;
+  domain?: string;
   log_config?: LogConfig;
   deploy_type: DeployType;
   deploy_config:

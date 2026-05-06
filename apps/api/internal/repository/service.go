@@ -37,6 +37,7 @@ type CreateServiceInput struct {
 	Workdir      string
 	RunAsUser    *string
 	LocalPort    *int
+	Domain       *string
 	LogConfig    json.RawMessage
 	DeployType   model.DeployType
 	DeployConfig json.RawMessage // defaults to '{}' when nil
@@ -48,6 +49,7 @@ type UpdateServiceInput struct {
 	Workdir      string
 	RunAsUser    *string
 	LocalPort    *int
+	Domain       *string
 	LogConfig    json.RawMessage
 	DeployType   model.DeployType
 	DeployConfig json.RawMessage
@@ -64,12 +66,12 @@ func (r *ServiceRepository) Create(ctx context.Context, in CreateServiceInput) (
 	}
 
 	const q = `
-		INSERT INTO services (server_id, name, workdir, run_as_user, local_port, log_config, deploy_type, deploy_config)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		RETURNING id, server_id, name, workdir, run_as_user, local_port, log_config, deploy_type, deploy_config, created_at, updated_at`
+		INSERT INTO services (server_id, name, workdir, run_as_user, local_port, domain, log_config, deploy_type, deploy_config)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id, server_id, name, workdir, run_as_user, local_port, domain, log_config, deploy_type, deploy_config, created_at, updated_at`
 
 	rows, err := r.pool.Query(ctx, q,
-		in.ServerID, in.Name, in.Workdir, in.RunAsUser, in.LocalPort, nullableJSON(in.LogConfig), string(in.DeployType), []byte(in.DeployConfig),
+		in.ServerID, in.Name, in.Workdir, in.RunAsUser, in.LocalPort, in.Domain, nullableJSON(in.LogConfig), string(in.DeployType), []byte(in.DeployConfig),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("repository.Service.Create: query: %w", err)
@@ -86,7 +88,7 @@ func (r *ServiceRepository) Create(ctx context.Context, in CreateServiceInput) (
 // List returns all services belonging to serverID.
 func (r *ServiceRepository) List(ctx context.Context, serverID uuid.UUID) ([]model.Service, error) {
 	const q = `
-		SELECT id, server_id, name, workdir, run_as_user, local_port, log_config, deploy_type, deploy_config, created_at, updated_at
+		SELECT id, server_id, name, workdir, run_as_user, local_port, domain, log_config, deploy_type, deploy_config, created_at, updated_at
 		FROM   services
 		WHERE  server_id = $1
 		ORDER  BY name ASC`
@@ -107,7 +109,7 @@ func (r *ServiceRepository) List(ctx context.Context, serverID uuid.UUID) ([]mod
 // GetByID fetches a single service by its primary key.
 func (r *ServiceRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Service, error) {
 	const q = `
-		SELECT id, server_id, name, workdir, run_as_user, local_port, log_config, deploy_type, deploy_config, created_at, updated_at
+		SELECT id, server_id, name, workdir, run_as_user, local_port, domain, log_config, deploy_type, deploy_config, created_at, updated_at
 		FROM   services
 		WHERE  id = $1`
 
@@ -136,15 +138,16 @@ func (r *ServiceRepository) Update(ctx context.Context, id uuid.UUID, in UpdateS
 		       workdir       = $3,
 		       run_as_user   = $4,
 		       local_port    = $5,
-		       log_config    = $6,
-		       deploy_type   = $7,
-		       deploy_config = $8,
+		       domain        = $6,
+		       log_config    = $7,
+		       deploy_type   = $8,
+		       deploy_config = $9,
 		       updated_at    = now()
 		WHERE  id = $1
-		RETURNING id, server_id, name, workdir, run_as_user, local_port, log_config, deploy_type, deploy_config, created_at, updated_at`
+		RETURNING id, server_id, name, workdir, run_as_user, local_port, domain, log_config, deploy_type, deploy_config, created_at, updated_at`
 
 	rows, err := r.pool.Query(ctx, q,
-		id, in.Name, in.Workdir, in.RunAsUser, in.LocalPort, nullableJSON(in.LogConfig), string(in.DeployType), []byte(in.DeployConfig),
+		id, in.Name, in.Workdir, in.RunAsUser, in.LocalPort, in.Domain, nullableJSON(in.LogConfig), string(in.DeployType), []byte(in.DeployConfig),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("repository.Service.Update: query: %w", err)

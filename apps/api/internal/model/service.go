@@ -40,6 +40,7 @@ type Service struct {
 	Workdir      string          `db:"workdir"       json:"workdir"`
 	RunAsUser    *string         `db:"run_as_user"   json:"run_as_user,omitempty"`
 	LocalPort    *int            `db:"local_port"    json:"local_port,omitempty"`
+	Domain       *string         `db:"domain"        json:"domain,omitempty"`
 	LogConfig    json.RawMessage `db:"log_config"    json:"log_config,omitempty"`
 	DeployType   DeployType      `db:"deploy_type"   json:"deploy_type"`
 	DeployConfig json.RawMessage `db:"deploy_config" json:"deploy_config"`

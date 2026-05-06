@@ -43,6 +43,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
   const [editWorkdir, setEditWorkdir] = useState("")
   const [editRunAsUser, setEditRunAsUser] = useState("")
   const [editLocalPort, setEditLocalPort] = useState("")
+  const [editDomain, setEditDomain] = useState("")
   const [editLogConfig, setEditLogConfig] = useState<LogConfig | undefined>(undefined)
   const [editDeployType, setEditDeployType] = useState<DeployType>("php")
   const [editDeployConfig, setEditDeployConfig] = useState<unknown>({})
@@ -123,6 +124,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
     setEditWorkdir(service.workdir)
     setEditRunAsUser(service.run_as_user ?? "")
     setEditLocalPort(service.local_port ? String(service.local_port) : "")
+    setEditDomain(service.domain ?? "")
     setEditLogConfig(service.log_config as LogConfig | undefined)
     setEditDeployType(service.deploy_type)
     setEditDeployConfig(service.deploy_config)
@@ -140,6 +142,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
         workdir: editWorkdir,
         run_as_user: editRunAsUser || undefined,
         local_port: editLocalPort ? parseInt(editLocalPort) : undefined,
+        domain: editDomain || undefined,
         log_config: editLogConfig ?? null,
         deploy_type: editDeployType,
         deploy_config: editDeployConfig,
@@ -286,6 +289,14 @@ export default function ServiceDetailPage({ params }: PageProps) {
             </div>
             <div className="space-y-2">
               <Label>
+                Domain{" "}
+                <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <Input value={editDomain} onChange={(e) => setEditDomain(e.target.value)} placeholder="app.example.com" className="font-mono" />
+              <p className="text-xs text-muted-foreground">Domain or subdomain associated with this service.</p>
+            </div>
+            <div className="space-y-2">
+              <Label>
                 Log Source{" "}
                 <span className="text-muted-foreground font-normal">(optional)</span>
               </Label>
@@ -353,6 +364,11 @@ export default function ServiceDetailPage({ params }: PageProps) {
           {service.local_port && (
             <p className="text-sm text-muted-foreground mt-0.5">
               <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">:{service.local_port}</span>
+            </p>
+          )}
+          {service.domain && (
+            <p className="text-sm text-muted-foreground mt-0.5">
+              <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{service.domain}</span>
             </p>
           )}
         </div>
