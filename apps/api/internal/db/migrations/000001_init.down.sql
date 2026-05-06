@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS service_objects;
+DROP TABLE IF EXISTS objects;
+DROP TABLE IF EXISTS object_types;
+DROP TABLE IF EXISTS deployments;
+DROP TABLE IF EXISTS services;
+DROP TABLE IF EXISTS servers;
+DROP TABLE IF EXISTS env_vars;
+DROP TABLE IF EXISTS environments;
+DROP TABLE IF EXISTS projects;

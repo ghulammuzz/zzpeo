@@ -1,0 +1,54 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: zzpeo-db-prod
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-zzpeo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zzpeo}
+      POSTGRES_DB: ${POSTGRES_DB:-zzpeo}
+    volumes:
+      - zzpeo-pgdata-prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zzpeo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    container_name: zzpeo-api
+    env_file: ../.env
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "8080"
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    container_name: zzpeo-web
+    env_file: ../.env
+    depends_on:
+      - api
+    expose:
+      - "3000"
+
+  nginx:
+    image: nginx:alpine
+    container_name: zzpeo-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+      - web
+
+volumes:
+  zzpeo-pgdata-prod:

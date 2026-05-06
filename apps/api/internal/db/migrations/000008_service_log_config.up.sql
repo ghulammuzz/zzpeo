@@ -1,0 +1,1 @@
+ALTER TABLE services ADD COLUMN IF NOT EXISTS log_config JSONB;
