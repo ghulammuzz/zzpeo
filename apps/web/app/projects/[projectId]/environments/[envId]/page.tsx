@@ -5,14 +5,14 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
-import { Server as ServerIcon, Package, ArrowRight, Pencil, Trash2 } from "lucide-react"
+import { Server as ServerIcon, ArrowRight, Pencil, Trash2 } from "lucide-react"
 import type { Server, ObjectItem, EnvironmentType, Environment } from "@/lib/types"
 
 function slugify(str: string): string {
@@ -128,7 +128,11 @@ export default function EnvironmentOverviewPage({ params }: PageProps) {
     }
   }
 
-  if (loading || !environment) return <div className="text-muted-foreground py-8">Loading...</div>
+  if (loading || !environment) return (
+    <div className="flex items-center gap-2 py-12 text-muted-foreground font-mono text-sm">
+      <span className="animate-pulse">▌</span><span>loading...</span>
+    </div>
+  )
 
   const basePath = `/projects/${params.projectId}/environments/${params.envId}`
 
@@ -137,126 +141,116 @@ export default function EnvironmentOverviewPage({ params }: PageProps) {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-bold">{environment.name}</h1>
-            <Badge variant={ENV_TYPE_VARIANTS[environment.type] as "default" | "secondary" | "destructive"}>
+            <Badge variant={ENV_TYPE_VARIANTS[environment.type]}>
               {environment.type}
             </Badge>
           </div>
-          <p className="font-mono text-sm text-muted-foreground mt-0.5">{environment.slug}</p>
+          <p className="font-mono text-xs text-muted-foreground/60 mt-1">{environment.slug}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={openEditEnv}>
-            <Pencil className="h-3.5 w-3.5 mr-1" />
+            <Pencil className="h-3.5 w-3.5 mr-1.5" />
             Edit
           </Button>
-          <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setConfirmDeleteEnv(true)}>
-            <Trash2 className="h-3.5 w-3.5 mr-1" />
+          <Button
+            variant="outline" size="sm"
+            className="text-neon-magenta border-neon-magenta/30 hover:bg-neon-magenta/8 hover:text-neon-magenta"
+            onClick={() => setConfirmDeleteEnv(true)}
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
             Delete
+          </Button>
+          <Button variant="default" size="sm" asChild>
+            <Link href={`${basePath}/servers/new`}>+ Add Server</Link>
           </Button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-3xl font-bold">{servers.length}</div>
-            <div className="text-sm text-muted-foreground mt-1">Servers</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-3xl font-bold">{serviceCount}</div>
-            <div className="text-sm text-muted-foreground mt-1">Services</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-3xl font-bold">{objects.length}</div>
-            <div className="text-sm text-muted-foreground mt-1">Objects</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Nav links */}
-      <div className="grid gap-3 sm:grid-cols-2">
+      {/* Stats row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Link href={`${basePath}/servers`}>
-          <Card className="cursor-pointer hover:shadow-md transition-shadow">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ServerIcon className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle className="text-base">Servers</CardTitle>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </CardHeader>
-          </Card>
+          <div className="relative rounded-sm border border-border bg-card px-4 py-3 overflow-hidden hover:border-neon-cyan/30 transition-colors cursor-pointer">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-neon-cyan/30 to-transparent" />
+            <p className="text-2xl font-bold font-mono text-neon-cyan">{servers.length}</p>
+            <p className="text-[10px] font-mono tracking-widest text-muted-foreground uppercase mt-0.5">Servers</p>
+          </div>
         </Link>
+
+        <div className="relative rounded-sm border border-border bg-card px-4 py-3 overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-neon-cyan/30 to-transparent" />
+          <p className="text-2xl font-bold font-mono text-neon-cyan">{serviceCount}</p>
+          <p className="text-[10px] font-mono tracking-widest text-muted-foreground uppercase mt-0.5">Services</p>
+        </div>
+
         <Link href={`${basePath}/objects`}>
-          <Card className="cursor-pointer hover:shadow-md transition-shadow">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle className="text-base">Objects</CardTitle>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </CardHeader>
-          </Card>
+          <div className="relative rounded-sm border border-border bg-card px-4 py-3 overflow-hidden hover:border-neon-cyan/30 transition-colors cursor-pointer">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-neon-cyan/30 to-transparent" />
+            <p className="text-2xl font-bold font-mono text-neon-cyan">{objects.length}</p>
+            <p className="text-[10px] font-mono tracking-widest text-muted-foreground uppercase mt-0.5">Objects</p>
+          </div>
+        </Link>
+
+        <Link href={`${basePath}/env-vars`}>
+          <div className="relative rounded-sm border border-border bg-card px-4 py-3 overflow-hidden hover:border-neon-cyan/30 transition-colors cursor-pointer">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-neon-cyan/30 to-transparent" />
+            <p className="text-2xl font-bold font-mono text-neon-cyan">→</p>
+            <p className="text-[10px] font-mono tracking-widest text-muted-foreground uppercase mt-0.5">Env Vars</p>
+          </div>
         </Link>
       </div>
 
       {/* Server list */}
-      {servers.length > 0 ? (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold">Servers</h2>
-            <Button variant="outline" size="sm" asChild>
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase">// SERVERS</p>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`${basePath}/servers/new`}>+ Add Server</Link>
+          </Button>
+        </div>
+
+        {servers.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-sm border border-dashed border-border/50 py-16 text-center">
+            <ServerIcon className="h-8 w-8 text-muted-foreground/20 mb-4" />
+            <p className="text-sm font-mono text-muted-foreground/50">// empty</p>
+            <p className="text-xs text-muted-foreground/30 mt-1">no servers configured for this environment</p>
+            <Button variant="outline" size="sm" className="mt-5" asChild>
               <Link href={`${basePath}/servers/new`}>Add Server</Link>
             </Button>
           </div>
+        ) : (
           <div className="space-y-2">
             {servers.map((server) => (
               <Card
                 key={server.id}
-                className="cursor-pointer hover:shadow-md transition-shadow"
+                className="cursor-pointer hover:border-neon-cyan/20 transition-colors"
                 onClick={() => router.push(`${basePath}/servers/${server.id}`)}
               >
-                <CardContent className="flex items-center justify-between py-4">
+                <CardContent className="flex items-center justify-between py-3.5 px-4">
                   <div>
-                    <p className="font-medium">{server.name}</p>
-                    <p className="text-sm text-muted-foreground font-mono">
+                    <p className="font-medium text-sm text-foreground">{server.name}</p>
+                    <p className="font-mono text-xs text-muted-foreground/60 mt-0.5">
                       {server.user}@{server.host}:{server.port}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">{server.auth_type}</Badge>
+                  <div className="flex items-center gap-2.5">
+                    <Badge variant="secondary">{server.auth_type}</Badge>
                     <Button
-                      variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                      variant="ghost" size="icon"
+                      className="h-7 w-7 text-neon-magenta/60 hover:text-neon-magenta hover:bg-neon-magenta/8"
                       onClick={(e) => { e.stopPropagation(); setDeleteServer(server) }}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    <ArrowRight className="h-4 w-4 text-neon-cyan/50" />
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
-          <ServerIcon className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="font-semibold">No servers yet</h3>
-          <p className="text-muted-foreground text-sm mt-1 mb-4">Add a server to start deploying services.</p>
-          <Button asChild>
-            <Link href={`${basePath}/servers/new`}>Add Server</Link>
-          </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Edit env dialog */}
       <Dialog open={editingEnv} onOpenChange={(open) => !open && setEditingEnv(false)}>

@@ -12,15 +12,8 @@ import { toast } from "@/components/ui/use-toast"
 import { Plus, Trash2, Save, FileText, Eye, EyeOff, ChevronDown, ChevronUp } from "lucide-react"
 import type { EnvVar } from "@/lib/types"
 
-interface Row {
-  key: string
-  value: string
-  existing: boolean
-}
-
-interface PageProps {
-  params: { projectId: string; envId: string }
-}
+interface Row { key: string; value: string; existing: boolean }
+interface PageProps { params: { projectId: string; envId: string } }
 
 function parseEnvText(text: string): Array<{ key: string; value: string }> {
   return text
@@ -150,79 +143,92 @@ export default function EnvVarsPage({ params }: PageProps) {
   }
 
   if (loading) {
-    return <div className="text-muted-foreground py-8">Loading env vars...</div>
+    return (
+      <div className="flex items-center gap-2 py-12 text-muted-foreground font-mono text-sm">
+        <span className="animate-pulse">▌</span><span>loading...</span>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Environment Variables</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Manage key-value environment variables. Values are masked in list view.
+          <h1 className="text-xl font-bold">Environment Variables</h1>
+          <p className="text-xs text-muted-foreground/60 font-mono mt-0.5">
+            key-value pairs · values masked in list view
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowImport(true)}>
-            <FileText className="h-4 w-4 mr-2" />
-            Import from text
+          <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
+            <FileText className="h-3.5 w-3.5 mr-1.5" />
+            Import
           </Button>
-          <Button variant="outline" onClick={addRow}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button variant="outline" size="sm" onClick={addRow}>
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
             Add Row
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            <Save className="h-4 w-4 mr-2" />
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            <Save className="h-3.5 w-3.5 mr-1.5" />
             {saving ? "Saving..." : "Save All"}
           </Button>
         </div>
       </div>
 
       {/* Collapse toggle bar */}
-      <div
-        className="flex items-center justify-between rounded-md border px-4 py-2 cursor-pointer hover:bg-muted/40 transition-colors"
+      <button
         onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-between rounded-sm border border-border bg-card px-4 py-2.5 hover:border-neon-cyan/20 transition-colors group"
       >
         <div className="flex items-center gap-2 flex-wrap">
           {rows.length === 0 ? (
-            <span className="text-sm text-muted-foreground">No variables</span>
+            <span className="text-xs font-mono text-muted-foreground/50">// no variables</span>
           ) : expanded ? (
-            <span className="text-sm text-muted-foreground">{rows.length} variable{rows.length !== 1 ? "s" : ""}</span>
+            <span className="text-xs font-mono text-muted-foreground/60">
+              {rows.length} variable{rows.length !== 1 ? "s" : ""}
+            </span>
           ) : (
             rows.map((r) => r.key && (
-              <Badge key={r.key} variant="secondary" className="font-mono text-xs">
+              <span
+                key={r.key}
+                className="font-mono text-[10px] px-1.5 py-0.5 rounded-sm border border-border bg-secondary/50 text-neon-cyan/70"
+              >
                 {r.key}
-              </Badge>
+              </span>
             ))
           )}
         </div>
-        <Button variant="ghost" size="sm" tabIndex={-1} onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v) }}>
-          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </Button>
-      </div>
+        {expanded
+          ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-neon-cyan/60 transition-colors" />
+          : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-neon-cyan/60 transition-colors" />}
+      </button>
 
+      {/* Table */}
       {expanded && (
-        <div className="rounded-md border">
+        <div className="rounded-sm border border-border overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-[38%]">Key</TableHead>
-                <TableHead className="w-[52%]">Value</TableHead>
+              <TableRow className="border-border hover:bg-transparent">
+                <TableHead className="w-[38%] text-[10px] font-mono tracking-widest text-muted-foreground/50 uppercase">Key</TableHead>
+                <TableHead className="w-[52%] text-[10px] font-mono tracking-widest text-muted-foreground/50 uppercase">Value</TableHead>
                 <TableHead className="w-[10%]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                    No env vars yet. Click &ldquo;Add Row&rdquo; to create one.
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={3} className="py-8 text-center">
+                    <span className="text-xs font-mono text-muted-foreground/40">
+                      // no rows — click &ldquo;Add Row&rdquo; to create one
+                    </span>
                   </TableCell>
                 </TableRow>
               ) : (
                 rows.map((row, i) => {
                   const shown = shownRows.has(i)
                   return (
-                    <TableRow key={i}>
+                    <TableRow key={i} className="border-border hover:bg-neon-cyan/[0.03] transition-colors">
                       <TableCell>
                         <Input
                           value={row.key}
@@ -245,7 +251,7 @@ export default function EnvVarsPage({ params }: PageProps) {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            className="h-8 w-8 text-muted-foreground hover:text-neon-cyan transition-colors"
                             onClick={() => toggleShowRow(i)}
                           >
                             {shown ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -253,7 +259,7 @@ export default function EnvVarsPage({ params }: PageProps) {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            className="h-8 w-8 text-muted-foreground hover:text-neon-magenta transition-colors"
                             onClick={() => removeRow(i)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -269,16 +275,24 @@ export default function EnvVarsPage({ params }: PageProps) {
         </div>
       )}
 
+      {/* Bottom save */}
       {rows.length > 0 && (
         <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={saving}>
-            <Save className="h-4 w-4 mr-2" />
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            <Save className="h-3.5 w-3.5 mr-1.5" />
             {saving ? "Saving..." : "Save All"}
           </Button>
         </div>
       )}
 
-      <Dialog open={showImport} onOpenChange={(open) => { setShowImport(open); if (!open) { setImportText(""); setImportPreview([]) } }}>
+      {/* Import dialog */}
+      <Dialog
+        open={showImport}
+        onOpenChange={(open) => {
+          setShowImport(open)
+          if (!open) { setImportText(""); setImportPreview([]) }
+        }}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Import from text</DialogTitle>
@@ -292,21 +306,21 @@ export default function EnvVarsPage({ params }: PageProps) {
               autoFocus
             />
             {importPreview.length > 0 && (
-              <div className="rounded-md border bg-muted/40 p-3 space-y-1 max-h-48 overflow-y-auto">
-                <p className="text-xs font-medium text-muted-foreground mb-2">
-                  {importPreview.length} variable{importPreview.length !== 1 ? "s" : ""} detected
+              <div className="rounded-sm border border-border/50 bg-secondary/30 p-3 space-y-1 max-h-48 overflow-y-auto">
+                <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase mb-2">
+                  // {importPreview.length} variable{importPreview.length !== 1 ? "s" : ""} detected
                 </p>
                 {importPreview.map(({ key, value }) => (
                   <div key={key} className="flex items-start gap-2 text-xs font-mono min-w-0">
-                    <span className="text-foreground font-semibold shrink-0">{key}</span>
-                    <span className="text-muted-foreground shrink-0">=</span>
-                    <span className="text-muted-foreground break-all min-w-0">{value}</span>
+                    <span className="text-neon-cyan font-semibold shrink-0">{key}</span>
+                    <span className="text-muted-foreground/60 shrink-0">=</span>
+                    <span className="text-muted-foreground/60 break-all min-w-0">{value}</span>
                   </div>
                 ))}
               </div>
             )}
             {importText && importPreview.length === 0 && (
-              <p className="text-xs text-muted-foreground">No valid KEY=VALUE pairs detected.</p>
+              <p className="text-xs font-mono text-muted-foreground/40">// no valid KEY=VALUE pairs detected</p>
             )}
           </div>
           <DialogFooter>

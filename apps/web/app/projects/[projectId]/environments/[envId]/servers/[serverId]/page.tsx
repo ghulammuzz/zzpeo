@@ -15,11 +15,11 @@ import { Plus, Terminal, FileCode2, ArrowRight, Pencil, Trash2, GitBranch, Refre
 import type { Server, Service, DeployType, NginxBlock, ObjectItem } from "@/lib/types"
 import { TrafficFlowDiagram } from "@/components/servers/TrafficFlowDiagram"
 
-const DEPLOY_TYPE_COLORS: Record<DeployType, string> = {
-  php:    "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-  pm2:    "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  shell:  "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
-  docker: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+const DEPLOY_STYLE: Record<string, { bg: string; text: string }> = {
+  php:    { bg: "rgba(77,159,255,0.12)",   text: "#4d9fff" },
+  pm2:    { bg: "rgba(61,255,110,0.12)",   text: "#3dff6e" },
+  shell:  { bg: "rgba(255,230,0,0.12)",    text: "#ffe600" },
+  docker: { bg: "rgba(255,0,85,0.12)",     text: "#ff4499" },
 }
 
 interface PageProps {
@@ -128,7 +128,11 @@ export default function ServerDetailPage({ params }: PageProps) {
     }
   }
 
-  if (loading || !server) return <div className="text-muted-foreground py-8">Loading...</div>
+  if (loading || !server) return (
+    <div className="flex items-center gap-2 py-12 text-muted-foreground font-mono text-sm">
+      <span className="animate-pulse">▌</span><span>loading...</span>
+    </div>
+  )
 
   const basePath = `/projects/${params.projectId}/environments/${params.envId}/servers/${params.serverId}`
 
@@ -138,9 +142,20 @@ export default function ServerDetailPage({ params }: PageProps) {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold">{server.name}</h1>
-          <p className="font-mono text-sm text-muted-foreground mt-0.5">
-            {server.user}@{server.host}:{server.port}
-          </p>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-neon-cyan/70">
+              {server.host}:{server.port}
+            </span>
+            <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-muted-foreground">
+              {server.user}
+            </span>
+            <Badge variant="secondary">{server.auth_type}</Badge>
+            {server.fingerprint && (
+              <span className="font-mono text-[10px] text-muted-foreground/40 truncate max-w-[200px]">
+                {server.fingerprint}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={openEditServer}>
@@ -149,7 +164,7 @@ export default function ServerDetailPage({ params }: PageProps) {
           </Button>
           <Button
             variant="outline" size="sm"
-            className="text-destructive hover:text-destructive"
+            className="text-neon-magenta border-neon-magenta/30 hover:bg-neon-magenta/8 hover:text-neon-magenta"
             onClick={() => setConfirmDeleteServer(true)}
           >
             <Trash2 className="h-3.5 w-3.5 mr-1" />
@@ -170,39 +185,6 @@ export default function ServerDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Server info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Connection Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-            <div>
-              <dt className="text-muted-foreground font-medium">Host</dt>
-              <dd className="font-mono mt-1">{server.host}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground font-medium">Port</dt>
-              <dd className="font-mono mt-1">{server.port}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground font-medium">User</dt>
-              <dd className="font-mono mt-1">{server.user}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground font-medium">Auth</dt>
-              <dd className="mt-1"><Badge variant="outline">{server.auth_type}</Badge></dd>
-            </div>
-            {server.fingerprint && (
-              <div className="col-span-2 sm:col-span-4">
-                <dt className="text-muted-foreground font-medium">Fingerprint</dt>
-                <dd className="font-mono text-xs mt-1 break-all">{server.fingerprint}</dd>
-              </div>
-            )}
-          </dl>
-        </CardContent>
-      </Card>
-
       {/* Traffic flow visualization */}
       {services.length > 0 && (
         <Card>
@@ -219,7 +201,7 @@ export default function ServerDetailPage({ params }: PageProps) {
           </CardHeader>
           <CardContent>
             {nginxLoading ? (
-              <div className="h-[160px] w-full rounded-lg border bg-muted/20 animate-pulse" />
+              <div className="h-[160px] w-full rounded-sm border border-border bg-muted/20 animate-pulse" />
             ) : (
               <TrafficFlowDiagram
                 serverHost={server.host}
@@ -234,48 +216,66 @@ export default function ServerDetailPage({ params }: PageProps) {
 
       {/* Services */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Services</h2>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase">// SERVICES</p>
           <Button size="sm" asChild>
             <Link href={`${basePath}/services/new`}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 mr-1.5" />
               Add Service
             </Link>
           </Button>
         </div>
 
         {services.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
-            <Terminal className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="font-semibold">No services yet</h3>
-            <p className="text-muted-foreground text-sm mt-1 mb-4">Add a service to start deploying applications.</p>
-            <Button asChild>
+          <div className="flex flex-col items-center justify-center rounded-sm border border-dashed border-border/50 py-16 text-center">
+            <Terminal className="h-8 w-8 text-muted-foreground/20 mb-4" />
+            <p className="text-sm font-mono text-muted-foreground/50">// empty</p>
+            <p className="text-xs text-muted-foreground/30 mt-1">no services deployed on this server</p>
+            <Button variant="outline" size="sm" className="mt-5" asChild>
               <Link href={`${basePath}/services/new`}>
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 mr-1.5" />
                 Add Service
               </Link>
             </Button>
           </div>
         ) : (
-          <div className="space-y-2">
-            {services.map((service) => (
-              <Link key={service.id} href={`${basePath}/services/${service.id}`}>
-                <Card className="cursor-pointer hover:shadow-md transition-shadow">
-                  <CardContent className="flex items-center justify-between py-4">
-                    <div>
-                      <p className="font-medium">{service.name}</p>
-                      <p className="text-sm text-muted-foreground font-mono">{service.workdir}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${DEPLOY_TYPE_COLORS[service.deploy_type as DeployType] ?? ""}`}>
-                        {service.deploy_type}
-                      </span>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {services.map((service) => {
+              const style = DEPLOY_STYLE[service.deploy_type as DeployType] ?? { bg: "rgba(255,255,255,0.06)", text: "#888" }
+              return (
+                <Link key={service.id} href={`${basePath}/services/${service.id}`}>
+                  <Card className="cursor-pointer hover:border-neon-cyan/25 transition-colors h-full">
+                    <CardContent className="flex flex-col justify-between gap-3 py-4 px-4 h-full">
+                      <div>
+                        <p className="font-semibold text-sm text-foreground">{service.name}</p>
+                        <p className="font-mono text-xs text-muted-foreground/60 truncate mt-0.5">{service.workdir}</p>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className="inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-mono font-semibold"
+                            style={{ background: style.bg, color: style.text }}
+                          >
+                            {service.deploy_type}
+                          </span>
+                          {service.local_port && (
+                            <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-muted-foreground">
+                              :{service.local_port}
+                            </span>
+                          )}
+                          {service.domain && (
+                            <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-muted-foreground truncate max-w-[120px]">
+                              {service.domain}
+                            </span>
+                          )}
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-neon-cyan/50 shrink-0" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -24,6 +24,12 @@ const ENV_TYPE_VARIANTS: Record<EnvironmentType, "default" | "secondary" | "outl
   prod: "destructive",
   stg: "warning",
   custom: "secondary",
+}
+
+const ENV_TYPE_HOVER: Record<EnvironmentType, string> = {
+  prod: "hover:border-neon-magenta/40",
+  stg: "hover:border-neon-yellow/40",
+  custom: "hover:border-neon-cyan/30",
 }
 
 interface PageProps {
@@ -153,20 +159,33 @@ export default function ProjectDetailPage({ params }: PageProps) {
     }
   }
 
-  if (loading || !project) return <div className="text-muted-foreground py-8">Loading...</div>
+  if (loading || !project) return (
+    <div className="flex items-center gap-2 py-12 text-muted-foreground font-mono text-sm">
+      <span className="animate-pulse">▌</span>
+      <span>loading...</span>
+    </div>
+  )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Project header */}
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase mb-1">// PROJECT</p>
           <h1 className="text-2xl font-bold">{project.name}</h1>
-          <p className="font-mono text-sm text-muted-foreground mt-0.5">{project.slug}</p>
+          <div className="mt-1.5">
+            <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-muted-foreground">
+              {project.slug}
+            </span>
+          </div>
           {project.description && (
-            <p className="text-sm text-muted-foreground mt-2">{project.description}</p>
+            <p className="text-sm text-muted-foreground/70 mt-2">{project.description}</p>
           )}
+          <p className="font-mono text-xs text-muted-foreground/40 mt-2">
+            created {new Date(project.created_at).toLocaleDateString()} · updated {new Date(project.updated_at).toLocaleDateString()}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={openEditProject}>
             <Pencil className="h-3.5 w-3.5 mr-1" />
             Edit
@@ -186,15 +205,17 @@ export default function ProjectDetailPage({ params }: PageProps) {
 
       {/* Environments */}
       <div>
-        <h2 className="text-lg font-semibold mb-3">Environments</h2>
+        <div className="flex items-center gap-2 mb-4">
+          <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase">// ENVIRONMENTS</p>
+          <span className="font-mono text-xs text-muted-foreground/50">({environments.length})</span>
+        </div>
+
         {environments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
-            <Globe className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="font-semibold">No environments yet</h3>
-            <p className="text-muted-foreground text-sm mt-1 mb-4">
-              Add environments like production, staging, or custom setups.
-            </p>
-            <Button asChild>
+          <div className="flex flex-col items-center justify-center rounded-sm border border-dashed border-border/50 py-16 text-center">
+            <Globe className="h-8 w-8 text-muted-foreground/20 mb-4" />
+            <p className="text-sm font-mono text-muted-foreground/50">// empty</p>
+            <p className="text-xs text-muted-foreground/30 mt-1">No environments yet — add prod, staging, or custom</p>
+            <Button variant="outline" size="sm" className="mt-5" asChild>
               <Link href={`/projects/${params.projectId}/environments/new`}>
                 <Plus className="h-4 w-4 mr-2" />Create Environment
               </Link>
@@ -205,62 +226,39 @@ export default function ProjectDetailPage({ params }: PageProps) {
             {environments.map((env) => (
               <Card
                 key={env.id}
-                className="h-full transition-shadow hover:shadow-md cursor-pointer"
+                className={`relative group cursor-pointer transition-colors p-4 flex flex-col gap-3 ${ENV_TYPE_HOVER[env.type]}`}
                 onClick={() => router.push(`/projects/${params.projectId}/environments/${env.id}`)}
               >
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">{env.name}</CardTitle>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost" size="icon" className="h-7 w-7"
-                        onClick={(e) => openEditEnv(env, e)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={(e) => { e.stopPropagation(); setDeleteEnv(env) }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground ml-1" />
-                    </div>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm text-foreground truncate">{env.name}</p>
+                    <p className="text-[10px] font-mono text-muted-foreground/60 mt-0.5">{env.slug}</p>
                   </div>
-                  <div className="flex items-center gap-2 pt-1">
-                    <Badge variant={ENV_TYPE_VARIANTS[env.type]}>{env.type}</Badge>
-                    <span className="font-mono text-xs text-muted-foreground">{env.slug}</span>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <Badge variant={ENV_TYPE_VARIANTS[env.type]} className="text-[10px] px-1.5 py-0 h-4">{env.type}</Badge>
+                    <Button
+                      variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/50 hover:text-foreground"
+                      onClick={(e) => openEditEnv(env, e)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/50 hover:text-destructive"
+                      onClick={(e) => { e.stopPropagation(); setDeleteEnv(env) }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
-                </CardHeader>
+                </div>
+
+                <div className="flex items-center justify-end mt-auto pt-1 border-t border-border/40">
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-neon-cyan/60 transition-colors" />
+                </div>
               </Card>
             ))}
           </div>
         )}
       </div>
-
-      {/* Metadata */}
-      <Card>
-        <CardContent className="pt-6">
-          <dl className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <dt className="text-muted-foreground font-medium">Project ID</dt>
-              <dd className="font-mono text-xs mt-1">{project.id}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground font-medium">Environments</dt>
-              <dd className="mt-1">{environments.length}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground font-medium">Created</dt>
-              <dd className="mt-1">{new Date(project.created_at).toLocaleDateString()}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground font-medium">Updated</dt>
-              <dd className="mt-1">{new Date(project.updated_at).toLocaleDateString()}</dd>
-            </div>
-          </dl>
-        </CardContent>
-      </Card>
 
       {/* Edit project dialog */}
       <Dialog open={editingProject} onOpenChange={(open) => !open && setEditingProject(false)}>

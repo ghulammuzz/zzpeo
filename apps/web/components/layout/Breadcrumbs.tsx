@@ -2,20 +2,20 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChevronRight, Home } from "lucide-react"
 import { useEffect, useState } from "react"
 import { api } from "@/lib/api"
+import { cn } from "@/lib/utils"
 
 const SEGMENT_LABELS: Record<string, string> = {
-  projects: "Projects",
-  environments: "Environments",
-  "env-vars": "Env Vars",
-  servers: "Servers",
-  services: "Services",
-  objects: "Objects",
-  nginx: "Nginx",
-  deploy: "Deploy",
-  new: "New",
+  projects: "projects",
+  environments: "envs",
+  "env-vars": "env-vars",
+  servers: "servers",
+  services: "services",
+  objects: "objects",
+  nginx: "nginx",
+  deploy: "deploy",
+  new: "new",
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -64,18 +64,25 @@ export function Breadcrumbs() {
   })
 
   return (
-    <nav className="flex items-center gap-1 text-sm text-muted-foreground px-6 py-3 border-b overflow-hidden">
-      <Link href="/projects" className="flex items-center gap-1 hover:text-foreground transition-colors shrink-0">
-        <Home className="h-3.5 w-3.5" />
-        <span>zzpeo</span>
+    <nav className="flex items-center gap-0 text-xs text-muted-foreground px-4 py-0 border-b border-border bg-background/60 overflow-hidden h-9 flex-shrink-0">
+      {/* Home */}
+      <Link
+        href="/projects"
+        className="flex items-center gap-1.5 font-mono text-neon-cyan/70 hover:text-neon-cyan transition-colors shrink-0 pr-2"
+      >
+        <span className="text-neon-cyan/40 select-none">▸</span>
+        <span className="tracking-wider">zzpeo</span>
       </Link>
 
-      {crumbs.map(({ href, label, isLast }) => (
-        <span key={href} className="flex items-center gap-1 min-w-0 shrink">
-          <ChevronRight className="h-3.5 w-3.5 opacity-50 shrink-0" />
+      {crumbs.map(({ href, label, isLast }, idx) => (
+        <span key={href} className="flex items-center gap-0 min-w-0 shrink">
+          <span className="text-border px-1.5 select-none font-mono">/</span>
           {isLast ? (
             <span
-              className="text-foreground font-medium truncate max-w-[180px]"
+              className={cn(
+                "font-mono truncate max-w-[160px] text-foreground",
+                "text-glow-cyan"
+              )}
               title={label}
             >
               {label}
@@ -83,7 +90,7 @@ export function Breadcrumbs() {
           ) : (
             <Link
               href={href}
-              className="hover:text-foreground transition-colors truncate max-w-[180px]"
+              className="font-mono hover:text-neon-cyan/80 transition-colors truncate max-w-[160px] text-muted-foreground/60"
               title={label}
             >
               {label}

@@ -18,12 +18,13 @@ import { Rocket, Package, Pencil, Trash2, X, Plus, KeyRound, ScrollText, ArrowUp
 import { ServiceLogs } from "@/components/services/ServiceLogs"
 import { EnvVarsEditor } from "@/components/shared/EnvVarsEditor"
 import type { DeployType, ObjectItem, Service, LogConfig, EnvVarSet, LinkedEnvVarSet } from "@/lib/types"
+import type { PHPDeployConfig, PM2DeployConfig, ShellDeployConfig, DockerDeployConfig } from "@/lib/types"
 
-const DEPLOY_TYPE_COLORS: Record<DeployType, string> = {
-  php:    "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-  pm2:    "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  shell:  "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
-  docker: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+const DEPLOY_STYLE: Record<string, { bg: string; text: string }> = {
+  php:    { bg: "rgba(77,159,255,0.12)",  text: "#4d9fff" },
+  pm2:    { bg: "rgba(61,255,110,0.12)",  text: "#3dff6e" },
+  shell:  { bg: "rgba(255,230,0,0.12)",   text: "#ffe600" },
+  docker: { bg: "rgba(255,0,85,0.12)",    text: "#ff4499" },
 }
 
 interface PageProps {
@@ -248,21 +249,31 @@ export default function ServiceDetailPage({ params }: PageProps) {
     [params.serviceId],
   )
 
-  if (loading || !service) return <div className="text-muted-foreground py-8">Loading...</div>
+  if (loading || !service) {
+    return (
+      <div className="flex items-center gap-2 py-12 text-muted-foreground font-mono text-sm">
+        <span className="animate-pulse">▌</span><span>loading...</span>
+      </div>
+    )
+  }
 
   const linkedIds = new Set(connectedObjects.map((o) => o.id))
   const unlinkable = availableObjects.filter((o) => !linkedIds.has(o.id))
 
   if (editing) {
     return (
-      <div className="max-w-2xl space-y-6">
+      <div className="max-w-2xl space-y-5">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Edit Service</h1>
+          <h1 className="text-xl font-bold">Edit Service</h1>
           <Button variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
         </div>
 
         <Card>
-          <CardHeader><CardTitle>Service Details</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>
+              <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase mb-0">// SERVICE DETAILS</p>
+            </CardTitle>
+          </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Service Name</Label>
@@ -306,7 +317,11 @@ export default function ServiceDetailPage({ params }: PageProps) {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Deployment Configuration</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>
+              <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase mb-0">// DEPLOYMENT CONFIGURATION</p>
+            </CardTitle>
+          </CardHeader>
           <CardContent>
             <DeploymentTypeSelector
               key={`edit-${service.id}`}
@@ -317,7 +332,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
         </Card>
 
         {saveError && (
-          <div className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+          <div className="rounded-sm border border-neon-magenta/30 bg-neon-magenta/5 px-4 py-3 text-sm text-neon-magenta font-mono">
             {saveError}
           </div>
         )}
@@ -330,49 +345,65 @@ export default function ServiceDetailPage({ params }: PageProps) {
     )
   }
 
+  const ds = DEPLOY_STYLE[service.deploy_type] ?? { bg: "rgba(255,255,255,0.08)", text: "rgba(255,255,255,0.7)" }
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          {/* Row 1: name + deploy type badge */}
+          <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-2xl font-bold">{service.name}</h1>
-            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${DEPLOY_TYPE_COLORS[service.deploy_type]}`}>
+            <span
+              className="inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-mono font-semibold tracking-wider"
+              style={{ background: ds.bg, color: ds.text }}
+            >
               {service.deploy_type}
             </span>
           </div>
-          <p className="font-mono text-sm text-muted-foreground mt-0.5">{service.workdir}</p>
+
+          {/* Row 2: workdir + port + domain + run_as_user chips */}
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-muted-foreground/70">
+              {service.workdir}
+            </span>
+            {service.local_port && (
+              <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-neon-cyan/60">
+                :{service.local_port}
+              </span>
+            )}
+            {service.domain && (
+              <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-neon-blue/70">
+                {service.domain}
+              </span>
+            )}
+            {service.run_as_user && (
+              <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-muted-foreground/60">
+                su: {service.run_as_user}
+              </span>
+            )}
+          </div>
+
+          {/* Row 3: git info */}
           {gitInfo && (
-            <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
-              <GitBranch className="h-3.5 w-3.5 shrink-0" />
-              <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{gitInfo.branch}</span>
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <GitBranch className="h-3 w-3 text-neon-green/60 flex-shrink-0" />
+              <span className="font-mono text-xs bg-neon-green/8 border border-neon-green/20 px-2 py-0.5 rounded-sm text-neon-green/80">
+                {gitInfo.branch}
+              </span>
               {gitInfo.commit_hash && (
-                <span className="font-mono text-xs text-muted-foreground">{gitInfo.commit_hash}</span>
+                <span className="font-mono text-[10px] text-muted-foreground/40">{gitInfo.commit_hash}</span>
               )}
               {gitInfo.commit_message && (
-                <span className="text-xs text-muted-foreground truncate max-w-[260px]" title={gitInfo.commit_message}>
-                  {gitInfo.commit_message}
-                </span>
+                <span className="text-xs text-muted-foreground/50 truncate max-w-[300px]">{gitInfo.commit_message}</span>
               )}
-            </p>
-          )}
-          {service.run_as_user && (
-            <p className="text-sm text-muted-foreground mt-0.5">
-              <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">su - {service.run_as_user}</span>
-            </p>
-          )}
-          {service.local_port && (
-            <p className="text-sm text-muted-foreground mt-0.5">
-              <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">:{service.local_port}</span>
-            </p>
-          )}
-          {service.domain && (
-            <p className="text-sm text-muted-foreground mt-0.5">
-              <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{service.domain}</span>
-            </p>
+            </div>
           )}
         </div>
-        <div className="flex gap-2">
+
+        {/* Action buttons */}
+        <div className="flex gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={handleGitPull} disabled={gitPulling}>
             <RefreshCw className={`h-3.5 w-3.5 mr-1 ${gitPulling ? "animate-spin" : ""}`} />
             {gitPulling ? "Pulling..." : "Git Pull"}
@@ -394,98 +425,96 @@ export default function ServiceDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Git pull output */}
+      {/* Git pull output — terminal style */}
       {gitPullOutput && (
-        <div className={`rounded-lg border p-4 ${gitPullOutput.success ? "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/40" : "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40"}`}>
+        <div className={`rounded-sm border px-4 py-3 ${gitPullOutput.success ? "border-neon-green/30 bg-neon-green/5" : "border-neon-magenta/30 bg-neon-magenta/5"}`}>
           <div className="flex items-start justify-between gap-3">
-            <pre className={`font-mono text-xs whitespace-pre-wrap break-all flex-1 ${gitPullOutput.success ? "text-green-800 dark:text-green-300" : "text-red-800 dark:text-red-300"}`}>
+            <pre className={`font-mono text-xs whitespace-pre-wrap break-all flex-1 ${gitPullOutput.success ? "text-neon-green/80" : "text-neon-magenta/80"}`}>
               {gitPullOutput.output || (gitPullOutput.success ? "Already up to date." : "Pull failed.")}
             </pre>
-            <button onClick={() => setGitPullOutput(null)} className="text-muted-foreground hover:text-foreground shrink-0">
-              <X className="h-4 w-4" />
+            <button onClick={() => setGitPullOutput(null)} className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5">
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
       )}
 
-      {/* Info panel — deploy config + connected objects + meta */}
-      <Card>
-        <CardContent className="pt-5 pb-4">
-          <div className="grid grid-cols-3 divide-x">
-            {/* Deployment Configuration */}
-            <div className="pr-6 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Deployment Configuration</p>
-              <ConfigView type={service.deploy_type} config={service.deploy_config} />
-            </div>
+      {/* Info panel — 2-column grid */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* Col 1: Deploy Configuration */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle>
+              <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase mb-0">// DEPLOY CONFIG</p>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ConfigView type={service.deploy_type} config={service.deploy_config} />
+          </CardContent>
+        </Card>
 
-            {/* Connected Objects */}
-            <div className="px-6 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Connected Objects</p>
-              {connectedObjects.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {connectedObjects.map((obj) => (
-                    <Badge key={obj.id} variant="secondary" className="gap-1 pr-1">
-                      <span className="text-muted-foreground">{obj.object_type_name}:</span>
-                      {obj.name}
-                      <button
-                        className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
-                        onClick={() => handleUnlinkObject(obj.id)}
-                        title="Unlink"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
+        {/* Col 2: Connected Objects */}
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle>
+              <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase mb-0">// CONNECTED OBJECTS</p>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {connectedObjects.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {connectedObjects.map((obj) => (
+                  <Badge key={obj.id} variant="secondary" className="gap-1 pr-1">
+                    <span className="text-muted-foreground">{obj.object_type_name}:</span>
+                    {obj.name}
+                    <button
+                      className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                      onClick={() => handleUnlinkObject(obj.id)}
+                      title="Unlink"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground/50 font-mono text-xs">no objects linked.</p>
+            )}
+            <div className="flex gap-2 items-center">
+              <Select value={linkObjectId} onValueChange={setLinkObjectId} disabled={unlinkable.length === 0}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={unlinkable.length === 0 ? "No objects to link" : "Link object..."} />
+                </SelectTrigger>
+                <SelectContent>
+                  {unlinkable.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      <span className="text-muted-foreground text-xs mr-1">{o.object_type_name}:</span>
+                      {o.name}
+                    </SelectItem>
                   ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No objects linked yet.</p>
-              )}
-              <div className="flex gap-2 items-center">
-                <Select value={linkObjectId} onValueChange={setLinkObjectId} disabled={unlinkable.length === 0}>
-                  <SelectTrigger className="w-52">
-                    <SelectValue placeholder={unlinkable.length === 0 ? "No objects to link" : "Link object..."} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unlinkable.map((o) => (
-                      <SelectItem key={o.id} value={o.id}>
-                        <span className="text-muted-foreground text-xs mr-1">{o.object_type_name}:</span>
-                        {o.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button size="sm" onClick={handleLinkObject} disabled={!linkObjectId || linking || unlinkable.length === 0}>
-                  <Plus className="h-3.5 w-3.5 mr-1" />
-                  Link
-                </Button>
-              </div>
+                </SelectContent>
+              </Select>
+              <Button size="sm" onClick={handleLinkObject} disabled={!linkObjectId || linking || unlinkable.length === 0}>
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
             </div>
+          </CardContent>
+        </Card>
+      </div>
 
-            {/* Meta */}
-            <div className="pl-6 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Info</p>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <p className="text-xs text-muted-foreground">Service ID</p>
-                  <p className="font-mono text-xs mt-0.5 break-all">{service.id}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Created</p>
-                  <p className="mt-0.5 text-sm">{new Date(service.created_at).toLocaleDateString()}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Metadata strip */}
+      <div className="flex items-center gap-4 mt-1 pt-3 border-t border-border/50">
+        <span className="text-xs text-muted-foreground/40 font-mono">id: {service.id}</span>
+        <span className="text-xs text-muted-foreground/40">created {new Date(service.created_at).toLocaleDateString()}</span>
+      </div>
 
       {/* Live Logs */}
       {(service.deploy_type === "docker" || service.deploy_type === "pm2" || service.log_config != null) && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <ScrollText className="h-4 w-4" />
-              Live Logs
+              <ScrollText className="h-4 w-4 text-neon-cyan/60" />
+              <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase mb-0">// LIVE LOGS</p>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -502,14 +531,14 @@ export default function ServiceDetailPage({ params }: PageProps) {
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <KeyRound className="h-4 w-4" />
-            Environment Variables
+            <KeyRound className="h-4 w-4 text-neon-cyan/60" />
+            <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase mb-0">// ENVIRONMENT VARIABLES</p>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Linked sets subsection */}
           <div className="space-y-3">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Linked Sets</p>
+            <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase mb-3">// LINKED SETS</p>
             {linkedSets.length > 0 ? (
               <div className="space-y-2">
                 {linkedSets.map((s) => (
@@ -540,7 +569,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No sets linked.</p>
+              <p className="text-xs text-muted-foreground/50 font-mono">no sets linked.</p>
             )}
             {allSets.filter((s) => !linkedSets.find((l) => l.id === s.id)).length > 0 && (
               <div className="flex gap-2 items-center">
@@ -567,27 +596,30 @@ export default function ServiceDetailPage({ params }: PageProps) {
                 </Button>
               </div>
             )}
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground/50">
               Set vars injected at deploy time. Service vars override on conflict.
             </p>
           </div>
 
           {/* Service-specific env vars */}
-          <EnvVarsEditor
-            loadFn={loadEnvVars}
-            revealFn={revealEnvVars}
-            saveFn={saveEnvVars}
-            deleteFn={deleteEnvVar}
-            showDeployMode={service.deploy_type === "docker"}
-            collapsible
-            hint={
-              service.deploy_type === "docker"
-                ? <>Per-variable: choose <strong>build arg</strong>, <strong>runtime</strong>, or <strong>both</strong>.</>
-                : (service.deploy_type === "php" || service.deploy_type === "pm2")
-                ? <>Written to <code className="bg-muted px-1 rounded">.env</code> on deploy.</>
-                : undefined
-            }
-          />
+          <div className="space-y-2">
+            <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase mb-3">// SERVICE VARS</p>
+            <EnvVarsEditor
+              loadFn={loadEnvVars}
+              revealFn={revealEnvVars}
+              saveFn={saveEnvVars}
+              deleteFn={deleteEnvVar}
+              showDeployMode={service.deploy_type === "docker"}
+              collapsible
+              hint={
+                service.deploy_type === "docker"
+                  ? <>Per-variable: choose <strong>build arg</strong>, <strong>runtime</strong>, or <strong>both</strong>.</>
+                  : (service.deploy_type === "php" || service.deploy_type === "pm2")
+                  ? <>Written to <code className="bg-muted px-1 rounded">.env</code> on deploy.</>
+                  : undefined
+              }
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -613,8 +645,6 @@ export default function ServiceDetailPage({ params }: PageProps) {
 // ---------------------------------------------------------------------------
 // Read-only config display
 // ---------------------------------------------------------------------------
-
-import type { PHPDeployConfig, PM2DeployConfig, ShellDeployConfig, DockerDeployConfig } from "@/lib/types"
 
 function ConfigView({ type, config }: { type: DeployType; config: unknown }) {
   if (type === "php") {

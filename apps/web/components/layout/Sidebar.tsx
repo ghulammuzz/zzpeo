@@ -1,10 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { api } from "@/lib/api"
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -19,8 +18,6 @@ import type {
 
 const PAGE_SIZE = 10
 
-// ─── Tab types ────────────────────────────────────────────────
-
 type TabKey = "projects" | "servers" | "services" | "env-var-sets" | "objects"
 
 interface Tab {
@@ -30,14 +27,12 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
-  { key: "projects",      label: "Projects",      icon: <FolderKanban className="h-5 w-5" /> },
-  { key: "servers",       label: "Servers",        icon: <Server className="h-5 w-5" /> },
-  { key: "services",      label: "Services",       icon: <Terminal className="h-5 w-5" /> },
-  { key: "env-var-sets",  label: "Env Var Sets",   icon: <KeyRound className="h-5 w-5" /> },
-  { key: "objects",       label: "Objects",        icon: <Package className="h-5 w-5" /> },
+  { key: "projects",      label: "Projects",      icon: <FolderKanban className="h-[18px] w-[18px]" /> },
+  { key: "servers",       label: "Servers",        icon: <Server className="h-[18px] w-[18px]" /> },
+  { key: "services",      label: "Services",       icon: <Terminal className="h-[18px] w-[18px]" /> },
+  { key: "env-var-sets",  label: "Env Var Sets",   icon: <KeyRound className="h-[18px] w-[18px]" /> },
+  { key: "objects",       label: "Objects",        icon: <Package className="h-[18px] w-[18px]" /> },
 ]
-
-// ─── Generic paginated list panel ─────────────────────────────
 
 interface ListItem {
   id: string
@@ -70,9 +65,9 @@ function PaginatedList({ items, loading, newHref }: { items: ListItem[]; loading
 
   if (loading) {
     return (
-      <div className="space-y-1 p-2">
+      <div className="space-y-1 p-2 pt-3">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-10 rounded bg-muted animate-pulse" />
+          <div key={i} className="h-9 rounded-sm bg-muted/40 animate-pulse" />
         ))}
       </div>
     )
@@ -80,15 +75,15 @@ function PaginatedList({ items, loading, newHref }: { items: ListItem[]; loading
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 py-8 px-4 text-center">
-        <p className="text-xs text-muted-foreground">None yet</p>
+      <div className="flex flex-col items-center gap-3 py-10 px-4 text-center">
+        <p className="text-xs text-muted-foreground font-mono">// empty</p>
         {newHref && (
           <Link
             href={newHref}
-            className="flex items-center gap-1 text-xs text-primary hover:underline"
+            className="flex items-center gap-1 text-xs text-neon-cyan hover:text-glow-cyan font-mono transition-all"
           >
             <Plus className="h-3 w-3" />
-            Create
+            init new
           </Link>
         )}
       </div>
@@ -97,42 +92,41 @@ function PaginatedList({ items, loading, newHref }: { items: ListItem[]; loading
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search input */}
       <div className="px-2 pt-2 pb-1 flex-shrink-0">
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/50 pointer-events-none" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search..."
-            className="w-full rounded-md bg-muted/50 border border-border/50 pl-6 pr-2 py-1 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            placeholder="search..."
+            className="w-full rounded-sm bg-background/60 border border-border pl-6 pr-2 py-1.5 text-xs font-mono placeholder:text-muted-foreground/30 focus:outline-none focus:border-neon-cyan/50 focus:shadow-[0_0_6px_rgba(0,229,255,0.15)] transition-all"
           />
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="space-y-0.5 p-2">
+        <div className="space-y-px p-2">
           {visible.length === 0 && (
-            <p className="px-2.5 py-4 text-center text-xs text-muted-foreground">No results</p>
+            <p className="px-2.5 py-4 text-center text-xs text-muted-foreground font-mono">// no match</p>
           )}
           {visible.map((item) => (
             <Link
               key={item.id}
               href={item.href}
-              className="flex flex-col rounded-md px-2.5 py-2 text-xs hover:bg-muted transition-colors group"
+              className="group flex flex-col rounded-sm px-2.5 py-2 text-xs transition-all hover:bg-neon-cyan/5 border border-transparent hover:border-neon-cyan/15"
             >
               <div className="flex items-center justify-between gap-1 min-w-0">
-                <span className="font-medium truncate text-foreground group-hover:text-foreground">
+                <span className="font-medium truncate text-foreground/80 group-hover:text-neon-cyan transition-colors">
                   {item.primary}
                 </span>
                 {item.badge && (
-                  <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-muted-foreground/15 text-muted-foreground font-mono">
+                  <span className="flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded-sm border border-neon-cyan/20 bg-neon-cyan/5 text-neon-cyan/60 font-mono tracking-wider uppercase">
                     {item.badge}
                   </span>
                 )}
               </div>
               {item.secondary && (
-                <span className="truncate text-muted-foreground text-[11px] mt-0.5">
+                <span className="truncate text-muted-foreground/60 text-[10px] mt-0.5 font-mono">
                   {item.secondary}
                 </span>
               )}
@@ -142,31 +136,29 @@ function PaginatedList({ items, loading, newHref }: { items: ListItem[]; loading
       </div>
 
       {total > 1 && (
-        <div className="flex items-center justify-between px-3 py-2 border-t flex-shrink-0">
+        <div className="flex items-center justify-between px-3 py-2 border-t border-border/50 flex-shrink-0">
           <button
             disabled={page === 1}
             onClick={() => setPage((p) => p - 1)}
-            className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted disabled:opacity-30 transition-colors"
+            className="flex h-6 w-6 items-center justify-center rounded-sm text-muted-foreground hover:text-neon-cyan hover:bg-neon-cyan/8 disabled:opacity-20 transition-all"
           >
-            <ChevronLeft className="h-3.5 w-3.5" />
+            <ChevronLeft className="h-3 w-3" />
           </button>
-          <span className="text-[11px] text-muted-foreground tabular-nums">
+          <span className="text-[10px] text-muted-foreground tabular-nums font-mono">
             {page} / {total}
           </span>
           <button
             disabled={page === total}
             onClick={() => setPage((p) => p + 1)}
-            className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted disabled:opacity-30 transition-colors"
+            className="flex h-6 w-6 items-center justify-center rounded-sm text-muted-foreground hover:text-neon-cyan hover:bg-neon-cyan/8 disabled:opacity-20 transition-all"
           >
-            <ChevronRight className="h-3.5 w-3.5" />
+            <ChevronRight className="h-3 w-3" />
           </button>
         </div>
       )}
     </div>
   )
 }
-
-// ─── Tab panels ───────────────────────────────────────────────
 
 function ProjectsPanel({ pathname }: { pathname: string }) {
   const [items, setItems] = useState<Project[]>([])
@@ -308,8 +300,6 @@ function TabPanel({ tab, pathname }: { tab: TabKey; pathname: string }) {
   }
 }
 
-// ─── Main sidebar ─────────────────────────────────────────────
-
 export function Sidebar() {
   const pathname = usePathname()
   const [activeTab, setActiveTab] = useState<TabKey | null>(null)
@@ -321,84 +311,83 @@ export function Sidebar() {
   const activeTabMeta = TABS.find((t) => t.key === activeTab)
 
   return (
-    <aside className="flex h-screen flex-shrink-0 border-r bg-background overflow-hidden">
-      {/* Activity strip */}
+    <aside className="flex h-screen flex-shrink-0 overflow-hidden">
       <TooltipProvider delayDuration={400}>
-      <div className="flex w-12 flex-shrink-0 flex-col items-center border-r bg-background py-2 gap-0.5">
-        {/* Logo */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Link
-              href="/projects"
-              className="flex h-10 w-10 items-center justify-center rounded-md mb-2"
-            >
-              <Rocket className="h-5 w-5 text-primary" />
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent side="right">Home</TooltipContent>
-        </Tooltip>
-
-        {/* Tab icons */}
-        {TABS.map((tab) => (
-          <Tooltip key={tab.key}>
+        {/* Activity strip */}
+        <div className="flex w-12 flex-shrink-0 flex-col items-center border-r border-border bg-background py-3 gap-0.5">
+          {/* Logo */}
+          <Tooltip>
             <TooltipTrigger asChild>
-              <button
-                onClick={() => toggle(tab.key)}
-                className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-md transition-colors",
-                  activeTab === tab.key
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
+              <Link
+                href="/projects"
+                className="flex h-9 w-9 items-center justify-center rounded-sm mb-3 text-neon-cyan hover:shadow-[0_0_12px_rgba(0,229,255,0.4)] transition-all"
               >
-                {tab.icon}
-              </button>
+                <Rocket className="h-[18px] w-[18px]" />
+              </Link>
             </TooltipTrigger>
-            <TooltipContent side="right">{tab.label}</TooltipContent>
+            <TooltipContent side="right" className="font-mono text-xs">zzpeo</TooltipContent>
           </Tooltip>
-        ))}
 
-        {/* Spacer + theme toggle at bottom */}
-        <div className="flex-1" />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div><ThemeToggle /></div>
-          </TooltipTrigger>
-          <TooltipContent side="right">Toggle theme</TooltipContent>
-        </Tooltip>
-      </div>
+          {/* Divider */}
+          <div className="w-6 h-px bg-border mb-1" />
+
+          {/* Tab icons */}
+          {TABS.map((tab) => (
+            <Tooltip key={tab.key}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => toggle(tab.key)}
+                  className={cn(
+                    "relative flex h-9 w-9 items-center justify-center rounded-sm transition-all duration-150",
+                    activeTab === tab.key
+                      ? "text-neon-cyan bg-neon-cyan/8 shadow-[0_0_10px_rgba(0,229,255,0.2)]"
+                      : "text-muted-foreground/60 hover:text-foreground hover:bg-accent"
+                  )}
+                >
+                  {activeTab === tab.key && (
+                    <span className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-4 bg-neon-cyan shadow-[0_0_4px_var(--neon-cyan)]" />
+                  )}
+                  {tab.icon}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-mono text-xs">{tab.label}</TooltipContent>
+            </Tooltip>
+          ))}
+
+          <div className="flex-1" />
+        </div>
       </TooltipProvider>
 
       {/* Slide-out panel */}
       <div
         className={cn(
-          "flex flex-col overflow-hidden transition-[width] duration-200 ease-in-out border-r",
+          "flex flex-col overflow-hidden transition-[width] duration-200 ease-in-out border-r border-border bg-card",
           panelOpen ? "w-60" : "w-0"
         )}
       >
         {activeTabMeta && (
           <>
             {/* Panel header */}
-            <div className="flex h-11 items-center justify-between px-3 border-b flex-shrink-0 bg-muted/30">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate">
-                {activeTabMeta.label}
+            <div className="flex h-10 items-center justify-between px-3 border-b border-border flex-shrink-0 bg-background/40">
+              <span className="text-[10px] font-semibold tracking-widest text-neon-cyan/70 font-mono uppercase truncate">
+                // {activeTabMeta.label}
               </span>
               <div className="flex items-center gap-1 flex-shrink-0">
                 {activeTab === "env-var-sets" && (
                   <Link
                     href="/env-var-sets/new"
                     title="New env var set"
-                    className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    className="flex h-6 w-6 items-center justify-center rounded-sm text-muted-foreground/50 hover:text-neon-cyan hover:bg-neon-cyan/8 transition-all"
                   >
-                    <Plus className="h-3.5 w-3.5" />
+                    <Plus className="h-3 w-3" />
                   </Link>
                 )}
                 <button
                   onClick={() => setActiveTab(null)}
-                  className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  className="flex h-6 w-6 items-center justify-center rounded-sm text-muted-foreground/50 hover:text-neon-magenta hover:bg-neon-magenta/8 transition-all"
                   title="Close"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X className="h-3 w-3" />
                 </button>
               </div>
             </div>

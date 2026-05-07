@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -84,14 +84,23 @@ export default function ProjectListPage() {
     }
   }
 
-  if (loading) return <div className="text-muted-foreground py-8">Loading...</div>
+  if (loading) return (
+    <div className="flex items-center gap-2 py-12 text-muted-foreground font-mono text-sm">
+      <span className="animate-pulse">▌</span>
+      <span>loading...</span>
+    </div>
+  )
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Projects</h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage your deployment projects</p>
+          <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase mb-1">// PROJECTS</p>
+          <div className="flex items-baseline gap-2">
+            <h1 className="text-2xl font-bold">Projects</h1>
+            <span className="font-mono text-sm text-muted-foreground/60">({projects.length})</span>
+          </div>
+          <p className="text-xs text-muted-foreground/70 mt-0.5">Manage your deployment projects</p>
         </div>
         <Button asChild>
           <Link href="/projects/new">
@@ -102,13 +111,11 @@ export default function ProjectListPage() {
       </div>
 
       {projects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
-          <FolderKanban className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="font-semibold text-lg">No projects yet</h3>
-          <p className="text-muted-foreground text-sm mt-1 mb-4">
-            Create your first project to get started with deployments.
-          </p>
-          <Button asChild>
+        <div className="flex flex-col items-center justify-center rounded-sm border border-dashed border-border/50 py-16 text-center">
+          <FolderKanban className="h-8 w-8 text-muted-foreground/20 mb-4" />
+          <p className="text-sm font-mono text-muted-foreground/50">// empty</p>
+          <p className="text-xs text-muted-foreground/30 mt-1">No projects yet — create one to get started</p>
+          <Button variant="outline" size="sm" className="mt-5" asChild>
             <Link href="/projects/new"><Plus className="h-4 w-4 mr-2" />Create Project</Link>
           </Button>
         </div>
@@ -117,37 +124,40 @@ export default function ProjectListPage() {
           {projects.map((project) => (
             <Card
               key={project.id}
-              className="h-full transition-shadow hover:shadow-md cursor-pointer"
+              className="relative group cursor-pointer transition-colors hover:border-neon-cyan/30 p-4 flex flex-col gap-3"
               onClick={() => router.push(`/projects/${project.id}`)}
             >
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{project.name}</CardTitle>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost" size="icon" className="h-7 w-7"
-                      onClick={(e) => openEdit(project, e)}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
-                      onClick={(e) => { e.stopPropagation(); setDeleteProject(project) }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground ml-1" />
-                  </div>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-semibold text-base text-foreground truncate">{project.name}</p>
+                  <p className="text-[10px] font-mono text-muted-foreground/60 mt-0.5">{project.slug}</p>
                 </div>
-                <CardDescription className="text-xs font-mono text-muted-foreground">
-                  {project.slug}
-                </CardDescription>
-              </CardHeader>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <Button
+                    variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/50 hover:text-foreground"
+                    onClick={(e) => openEdit(project, e)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/50 hover:text-destructive"
+                    onClick={(e) => { e.stopPropagation(); setDeleteProject(project) }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+
               {project.description && (
-                <CardContent>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
-                </CardContent>
+                <p className="text-xs text-muted-foreground/70 line-clamp-2">{project.description}</p>
               )}
+
+              <div className="flex items-center justify-between mt-auto pt-1 border-t border-border/40">
+                <span className="text-[10px] font-mono text-muted-foreground/40">
+                  {new Date(project.created_at).toLocaleDateString()}
+                </span>
+                <ArrowRight className="h-3.5 w-3.5 text-neon-cyan/40 group-hover:text-neon-cyan/70 transition-colors" />
+              </div>
             </Card>
           ))}
         </div>

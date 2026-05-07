@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import {
   ReactFlow,
   Background,
+  BackgroundVariant,
   Controls,
   Handle,
   Position,
@@ -19,11 +20,29 @@ import type { NginxBlock, Service, ObjectItem } from "@/lib/types";
 // Layout constants
 // ---------------------------------------------------------------------------
 
-const COL_X = { internet: 0, nginx: 200, service: 460, object: 700 };
-const SVC_NODE_H = 90;
-const OBJ_NODE_H = 60;
-const ROW_GAP = 24;
-const OBJ_GAP = 8;
+const COL_X = { internet: 0, nginx: 220, service: 490, object: 750 };
+const SVC_NODE_H = 100;
+const OBJ_NODE_H = 68;
+const ROW_GAP = 28;
+const OBJ_GAP = 10;
+
+// Cyberpunk neon palette
+const NEON = {
+  cyan:    "#00e5ff",
+  yellow:  "#ffe600",
+  blue:    "#4d9fff",
+  green:   "#3dff6e",
+  magenta: "#ff0055",
+  dim:     "hsl(218,38%,12%)",
+  surface: "hsl(218,45%,5%)",
+};
+
+const DEPLOY_STYLE: Record<string, { bg: string; text: string }> = {
+  docker: { bg: "rgba(255,0,85,0.14)",   text: "#ff4499" },
+  pm2:    { bg: "rgba(61,255,110,0.14)", text: "#3dff6e" },
+  php:    { bg: "rgba(77,159,255,0.14)", text: "#4d9fff" },
+  shell:  { bg: "rgba(255,230,0,0.14)",  text: "#ffe600" },
+};
 
 // ---------------------------------------------------------------------------
 // Port-matching helpers
@@ -46,14 +65,12 @@ function buildLanes(blocks: NginxBlock[], services: Service[]): Lane[] {
     const port = proxyPort(block);
     let matched: Service | null = null;
 
-    // Match by local_port first (explicit)
     if (port !== null) {
       for (const svc of services) {
         if (usedSvc.has(svc.id)) continue;
         if (svc.local_port === port) { matched = svc; break; }
       }
     }
-    // Fallback: root_dir ↔ workdir prefix match
     if (!matched) {
       for (const svc of services) {
         if (usedSvc.has(svc.id)) continue;
@@ -74,26 +91,35 @@ function buildLanes(blocks: NginxBlock[], services: Service[]): Lane[] {
 }
 
 // ---------------------------------------------------------------------------
-// Custom node components
+// Node components
 // ---------------------------------------------------------------------------
-
-const DEPLOY_COLORS: Record<string, string> = {
-  docker: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
-  pm2:    "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  php:    "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-  shell:  "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
-};
 
 function InternetNode({ data }: NodeProps) {
   const d = data as { host: string };
   return (
-    <div className="rounded-xl border-2 border-blue-400 bg-blue-50 dark:bg-blue-950 px-4 py-3 w-[160px] shadow-md">
-      <Handle type="source" position={Position.Right} className="!bg-blue-400" />
-      <div className="flex items-center gap-2">
-        <Globe className="h-5 w-5 text-blue-500 flex-shrink-0" />
-        <div>
-          <div className="font-semibold text-sm text-blue-800 dark:text-blue-200">Internet</div>
-          <div className="font-mono text-xs text-blue-600 dark:text-blue-400 truncate max-w-[100px]">{d.host}</div>
+    <div
+      style={{
+        background: NEON.surface,
+        border: `1.5px solid ${NEON.cyan}`,
+        boxShadow: `0 0 16px rgba(0,229,255,0.25), inset 0 0 20px rgba(0,229,255,0.04)`,
+        borderRadius: "4px",
+      }}
+      className="px-4 py-3 w-[164px]"
+    >
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ background: NEON.cyan, border: "none", width: 8, height: 8 }}
+      />
+      <div className="flex items-center gap-2.5">
+        <Globe style={{ color: NEON.cyan }} className="h-5 w-5 flex-shrink-0" />
+        <div className="min-w-0">
+          <div className="font-semibold text-sm leading-tight" style={{ color: NEON.cyan }}>
+            Internet
+          </div>
+          <div className="font-mono text-xs truncate mt-0.5" style={{ color: `${NEON.cyan}99` }}>
+            {d.host}
+          </div>
         </div>
       </div>
     </div>
@@ -104,34 +130,66 @@ function NginxNode({ data }: NodeProps) {
   const d = data as { block: NginxBlock };
   const b = d.block;
   return (
-    <div className="rounded-xl border-2 border-orange-300 bg-orange-50 dark:bg-orange-950/40 px-3 py-2.5 w-[220px] shadow-md">
-      <Handle type="target" position={Position.Left} className="!bg-orange-400" />
-      <Handle type="source" position={Position.Right} className="!bg-orange-400" />
+    <div
+      style={{
+        background: NEON.surface,
+        border: `1.5px solid ${NEON.yellow}`,
+        boxShadow: `0 0 12px rgba(255,230,0,0.18), inset 0 0 16px rgba(255,230,0,0.03)`,
+        borderRadius: "4px",
+      }}
+      className="px-3 py-2.5 w-[230px]"
+    >
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ background: NEON.yellow, border: "none", width: 8, height: 8 }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ background: NEON.yellow, border: "none", width: 8, height: 8 }}
+      />
       <div className="flex items-start gap-2">
-        <Server className="h-4 w-4 text-orange-500 flex-shrink-0 mt-0.5" />
+        <Server style={{ color: NEON.yellow }} className="h-4 w-4 flex-shrink-0 mt-0.5" />
         <div className="min-w-0 w-full">
-          <div className="flex items-center gap-1 flex-wrap mb-1">
+          {/* Domain names */}
+          <div className="flex items-center gap-1 flex-wrap mb-1.5">
             {b.ssl_enabled
-              ? <Shield className="h-3 w-3 text-green-500" />
-              : <ShieldOff className="h-3 w-3 text-muted-foreground" />
+              ? <Shield className="h-3 w-3 flex-shrink-0" style={{ color: NEON.green }} />
+              : <ShieldOff className="h-3 w-3 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }} />
             }
             {b.server_names.slice(0, 2).map((n) => (
-              <span key={n} className="font-mono text-xs font-medium truncate">{n}</span>
+              <span key={n} className="font-mono text-xs truncate font-medium" style={{ color: NEON.yellow }}>
+                {n}
+              </span>
             ))}
             {b.server_names.length > 2 && (
-              <span className="text-xs text-muted-foreground">+{b.server_names.length - 2}</span>
+              <span className="text-xs font-mono" style={{ color: `${NEON.yellow}80` }}>
+                +{b.server_names.length - 2}
+              </span>
             )}
           </div>
-          <div className="flex flex-wrap gap-1">
+          {/* Listen ports */}
+          <div className="flex flex-wrap gap-1 mb-1">
             {b.listen.map((l) => (
-              <span key={l} className="bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-300 rounded px-1.5 text-xs font-mono">{l}</span>
+              <span
+                key={l}
+                className="rounded-sm px-1.5 py-0.5 text-xs font-mono font-semibold"
+                style={{ background: "rgba(255,230,0,0.12)", color: NEON.yellow }}
+              >
+                {l}
+              </span>
             ))}
           </div>
           {b.proxy_pass && (
-            <div className="text-xs text-muted-foreground mt-1 font-mono truncate">→ {b.proxy_pass}</div>
+            <div className="text-xs font-mono truncate" style={{ color: "rgba(255,255,255,0.45)" }}>
+              → {b.proxy_pass}
+            </div>
           )}
           {b.root_dir && (
-            <div className="text-xs text-muted-foreground mt-1 font-mono truncate">root: {b.root_dir}</div>
+            <div className="text-xs font-mono truncate" style={{ color: "rgba(255,255,255,0.45)" }}>
+              root: {b.root_dir}
+            </div>
           )}
         </div>
       </div>
@@ -142,25 +200,59 @@ function NginxNode({ data }: NodeProps) {
 function ServiceNode({ data }: NodeProps) {
   const d = data as { service: Service };
   const svc = d.service;
+  const ds = DEPLOY_STYLE[svc.deploy_type] ?? { bg: "rgba(255,255,255,0.08)", text: "rgba(255,255,255,0.7)" };
   return (
-    <div className="rounded-xl border-2 border-purple-300 bg-purple-50 dark:bg-purple-950/40 px-3 py-2.5 w-[220px] shadow-md">
-      <Handle type="target" position={Position.Left} className="!bg-purple-400" />
-      <Handle type="source" position={Position.Right} className="!bg-purple-400" />
+    <div
+      style={{
+        background: NEON.surface,
+        border: `1.5px solid ${NEON.blue}`,
+        boxShadow: `0 0 12px rgba(77,159,255,0.18), inset 0 0 16px rgba(77,159,255,0.03)`,
+        borderRadius: "4px",
+      }}
+      className="px-3 py-2.5 w-[230px]"
+    >
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ background: NEON.blue, border: "none", width: 8, height: 8 }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ background: NEON.blue, border: "none", width: 8, height: 8 }}
+      />
       <div className="flex items-start gap-2">
-        <Box className="h-4 w-4 text-purple-500 flex-shrink-0 mt-0.5" />
+        <Box style={{ color: NEON.blue }} className="h-4 w-4 flex-shrink-0 mt-0.5" />
         <div className="min-w-0 w-full">
-          <div className="font-semibold text-sm truncate">{svc.name}</div>
-          <div className="font-mono text-xs text-muted-foreground truncate">{svc.workdir}</div>
-          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${DEPLOY_COLORS[svc.deploy_type] ?? ""}`}>
+          <div
+            className="font-semibold text-sm truncate leading-tight mb-0.5"
+            style={{ color: "rgba(208,238,255,0.95)" }}
+          >
+            {svc.name}
+          </div>
+          <div className="font-mono text-xs truncate mb-1.5" style={{ color: "rgba(255,255,255,0.38)" }}>
+            {svc.workdir}
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span
+              className="rounded-sm px-2 py-0.5 text-xs font-mono font-semibold tracking-wide"
+              style={{ background: ds.bg, color: ds.text }}
+            >
               {svc.deploy_type}
             </span>
             {svc.local_port && (
-              <span className="bg-muted rounded px-1.5 text-xs font-mono">:{svc.local_port}</span>
+              <span
+                className="rounded-sm px-1.5 py-0.5 text-xs font-mono font-semibold"
+                style={{ background: "rgba(77,159,255,0.12)", color: NEON.blue }}
+              >
+                :{svc.local_port}
+              </span>
             )}
           </div>
           {svc.run_as_user && (
-            <div className="text-xs text-muted-foreground mt-0.5 font-mono">su: {svc.run_as_user}</div>
+            <div className="text-xs font-mono mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+              su: {svc.run_as_user}
+            </div>
           )}
         </div>
       </div>
@@ -172,15 +264,32 @@ function ObjectNode({ data }: NodeProps) {
   const d = data as { obj: ObjectItem };
   const obj = d.obj;
   return (
-    <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 w-[200px] shadow-md">
-      <Handle type="target" position={Position.Left} className="!bg-emerald-400" />
+    <div
+      style={{
+        background: NEON.surface,
+        border: `1.5px solid ${NEON.green}`,
+        boxShadow: `0 0 12px rgba(61,255,110,0.18), inset 0 0 16px rgba(61,255,110,0.03)`,
+        borderRadius: "4px",
+      }}
+      className="px-3 py-2.5 w-[200px]"
+    >
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ background: NEON.green, border: "none", width: 8, height: 8 }}
+      />
       <div className="flex items-center gap-2">
-        <Database className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+        <Database style={{ color: NEON.green }} className="h-4 w-4 flex-shrink-0" />
         <div className="min-w-0">
-          <div className="font-medium text-sm truncate">{obj.name}</div>
-          <div className="text-xs text-muted-foreground">
+          <div
+            className="font-medium text-sm truncate leading-tight"
+            style={{ color: "rgba(208,238,255,0.9)" }}
+          >
+            {obj.name}
+          </div>
+          <div className="text-xs font-mono mt-0.5 truncate" style={{ color: `${NEON.green}99` }}>
             {obj.object_type_name}
-            {obj.host && <span className="font-mono"> {obj.host}{obj.port ? `:${obj.port}` : ""}</span>}
+            {obj.host && <span> {obj.host}{obj.port ? `:${obj.port}` : ""}</span>}
           </div>
         </div>
       </div>
@@ -212,7 +321,6 @@ export function TrafficFlowDiagram({ serverHost, nginxBlocks, services, serviceO
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
-    // Calculate y start per lane
     const laneYStarts: number[] = [];
     const laneHeights: number[] = [];
     let totalY = 0;
@@ -230,14 +338,12 @@ export function TrafficFlowDiagram({ serverHost, nginxBlocks, services, serviceO
 
     const totalHeight = Math.max(totalY - ROW_GAP, SVC_NODE_H);
 
-    // Track unique objects: id → { obj, ySum, count } for averaged positioning
     const objMeta = new Map<string, { obj: ObjectItem; ySum: number; count: number }>();
 
-    // Internet node — vertically centered
     nodes.push({
       id: "internet",
       type: "internet",
-      position: { x: COL_X.internet, y: totalHeight / 2 - 40 },
+      position: { x: COL_X.internet, y: totalHeight / 2 - 42 },
       data: { host: serverHost },
       draggable: false,
     });
@@ -248,7 +354,6 @@ export function TrafficFlowDiagram({ serverHost, nginxBlocks, services, serviceO
       const laneH = laneHeights[i];
       const midY = yStart + laneH / 2;
 
-      // Nginx node
       if (nginx) {
         const nginxId = `nginx-${i}`;
         nodes.push({
@@ -263,7 +368,7 @@ export function TrafficFlowDiagram({ serverHost, nginxBlocks, services, serviceO
           source: "internet",
           target: nginxId,
           type: "straight",
-          style: { stroke: "#93c5fd", strokeWidth: 1.5, opacity: 0.7 },
+          style: { stroke: `${NEON.yellow}88`, strokeWidth: 1.5 },
         });
 
         if (service) {
@@ -274,12 +379,11 @@ export function TrafficFlowDiagram({ serverHost, nginxBlocks, services, serviceO
             target: svcId,
             type: "straight",
             animated: true,
-            style: { stroke: "#c4b5fd", strokeWidth: 1.5 },
+            style: { stroke: `${NEON.blue}cc`, strokeWidth: 1.5 },
           });
         }
       }
 
-      // Service node
       if (service) {
         const svcId = `service-${service.id}`;
         nodes.push({
@@ -290,12 +394,9 @@ export function TrafficFlowDiagram({ serverHost, nginxBlocks, services, serviceO
           draggable: false,
         });
 
-
-        // Collect service→object edges (objects rendered in second pass below)
         const objs = serviceObjects[service.id] ?? [];
         for (const obj of objs) {
           const objId = `object-${obj.id}`;
-          // Accumulate Y contributions for shared-object averaging
           if (!objMeta.has(obj.id)) {
             objMeta.set(obj.id, { obj, ySum: midY, count: 1 });
           } else {
@@ -308,21 +409,17 @@ export function TrafficFlowDiagram({ serverHost, nginxBlocks, services, serviceO
             source: svcId,
             target: objId,
             type: "straight",
-            style: { stroke: "#6ee7b7", strokeWidth: 1.5 },
+            style: { stroke: `${NEON.green}88`, strokeWidth: 1.5 },
           });
         }
       }
     }
 
-    // Second pass: render each unique object node once, Y = average of connected service Y positions
-    // Group objects by their averaged Y so stacked objects per group are laid out together
     type ObjGroup = { obj: ObjectItem; avgY: number }[];
-    const grouped = new Map<string, ObjGroup>(); // key = svcId of first referencing service (for grouping)
+    const grouped = new Map<string, ObjGroup>();
 
-    // Build service→objects map to group objects that belong to same service set
-    for (const [objId, meta] of Array.from(objMeta)) {
+    for (const [, meta] of Array.from(objMeta)) {
       const avgY = meta.ySum / meta.count;
-      // Use rounded avgY as group key so co-located objects cluster
       const groupKey = String(Math.round(avgY));
       if (!grouped.has(groupKey)) grouped.set(groupKey, []);
       grouped.get(groupKey)!.push({ obj: meta.obj, avgY });
@@ -343,25 +440,37 @@ export function TrafficFlowDiagram({ serverHost, nginxBlocks, services, serviceO
       });
     }
 
-    return { nodes, edges, height: Math.max(totalHeight + 40, 160) };
+    return { nodes, edges, height: Math.max(totalHeight + 48, 160) };
   }, [nginxBlocks, services, serviceObjects, serverHost]);
 
   if (services.length === 0 && nginxBlocks.length === 0) return null;
 
   return (
-    <div style={{ height: Math.min(height, 360) }} className="w-full rounded-lg border overflow-hidden bg-muted/20">
+    <div
+      className="w-full rounded-sm border border-border overflow-hidden"
+      style={{
+        height: Math.min(height, 380),
+        background: "hsl(222,47%,3%)",
+      }}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.15 }}
+        fitViewOptions={{ padding: 0.18 }}
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}
         proOptions={{ hideAttribution: true }}
+        style={{ background: "hsl(222,47%,3%)" }}
       >
-        <Background gap={20} size={1} className="opacity-40" />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={24}
+          size={1}
+          color="rgba(0,229,255,0.12)"
+        />
         <Controls showInteractive={false} />
       </ReactFlow>
     </div>

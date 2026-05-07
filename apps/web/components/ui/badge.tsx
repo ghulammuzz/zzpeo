@@ -3,21 +3,22 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-sm border px-2 py-0.5 text-[10px] font-semibold tracking-widest uppercase font-mono transition-colors focus:outline-none focus:ring-1 focus:ring-ring",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+          "border-neon-cyan/40 bg-neon-cyan/8 text-neon-cyan",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border-border bg-secondary/60 text-muted-foreground",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-foreground",
+          "border-neon-magenta/40 bg-neon-magenta/8 text-neon-magenta",
+        outline:
+          "border-border text-foreground bg-transparent",
         success:
-          "border-transparent bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+          "border-neon-green/40 bg-neon-green/8 text-neon-green",
         warning:
-          "border-transparent bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
+          "border-neon-yellow/40 bg-neon-yellow/8 text-neon-yellow",
       },
     },
     defaultVariants: {
