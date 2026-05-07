@@ -408,11 +408,74 @@ export default function ServiceDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* Deploy config — read-only view */}
+      {/* Info panel — deploy config + connected objects + meta */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Deployment Configuration</CardTitle></CardHeader>
-        <CardContent>
-          <ConfigView type={service.deploy_type} config={service.deploy_config} />
+        <CardContent className="pt-5 pb-4">
+          <div className="grid grid-cols-3 divide-x">
+            {/* Deployment Configuration */}
+            <div className="pr-6 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Deployment Configuration</p>
+              <ConfigView type={service.deploy_type} config={service.deploy_config} />
+            </div>
+
+            {/* Connected Objects */}
+            <div className="px-6 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Connected Objects</p>
+              {connectedObjects.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {connectedObjects.map((obj) => (
+                    <Badge key={obj.id} variant="secondary" className="gap-1 pr-1">
+                      <span className="text-muted-foreground">{obj.object_type_name}:</span>
+                      {obj.name}
+                      <button
+                        className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                        onClick={() => handleUnlinkObject(obj.id)}
+                        title="Unlink"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No objects linked yet.</p>
+              )}
+              <div className="flex gap-2 items-center">
+                <Select value={linkObjectId} onValueChange={setLinkObjectId} disabled={unlinkable.length === 0}>
+                  <SelectTrigger className="w-52">
+                    <SelectValue placeholder={unlinkable.length === 0 ? "No objects to link" : "Link object..."} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unlinkable.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        <span className="text-muted-foreground text-xs mr-1">{o.object_type_name}:</span>
+                        {o.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" onClick={handleLinkObject} disabled={!linkObjectId || linking || unlinkable.length === 0}>
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  Link
+                </Button>
+              </div>
+            </div>
+
+            {/* Meta */}
+            <div className="pl-6 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Info</p>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Service ID</p>
+                  <p className="font-mono text-xs mt-0.5 break-all">{service.id}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Created</p>
+                  <p className="mt-0.5 text-sm">{new Date(service.created_at).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -434,59 +497,6 @@ export default function ServiceDetailPage({ params }: PageProps) {
           </CardContent>
         </Card>
       )}
-
-      {/* Connected Objects */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Connected Objects
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {connectedObjects.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {connectedObjects.map((obj) => (
-                <Badge key={obj.id} variant="secondary" className="gap-1 pr-1">
-                  <span className="text-muted-foreground">{obj.object_type_name}:</span>
-                  {obj.name}
-                  <button
-                    className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
-                    onClick={() => handleUnlinkObject(obj.id)}
-                    title="Unlink"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">No objects linked yet.</p>
-          )}
-
-          {unlinkable.length > 0 && (
-            <div className="flex gap-2 items-center pt-1">
-              <Select value={linkObjectId} onValueChange={setLinkObjectId}>
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="Select object to link..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {unlinkable.map((o) => (
-                    <SelectItem key={o.id} value={o.id}>
-                      <span className="text-muted-foreground text-xs mr-1">{o.object_type_name}:</span>
-                      {o.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button size="sm" onClick={handleLinkObject} disabled={!linkObjectId || linking}>
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                Link
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Environment Variables (service vars + linked sets) */}
       <Card>
@@ -578,22 +588,6 @@ export default function ServiceDetailPage({ params }: PageProps) {
                 : undefined
             }
           />
-        </CardContent>
-      </Card>
-
-      {/* Meta */}
-      <Card>
-        <CardContent className="pt-6">
-          <dl className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <dt className="text-muted-foreground font-medium">Service ID</dt>
-              <dd className="font-mono text-xs mt-1">{service.id}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground font-medium">Created</dt>
-              <dd className="mt-1">{new Date(service.created_at).toLocaleDateString()}</dd>
-            </div>
-          </dl>
         </CardContent>
       </Card>
 

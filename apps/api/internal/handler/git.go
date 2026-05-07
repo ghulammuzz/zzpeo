@@ -54,10 +54,12 @@ func (h *GitHandler) GitInfo(c *fiber.Ctx) error {
 		runAsUser = *svc.RunAsUser
 	}
 
+	client.RunCaptured(svc.Workdir, runAsUser, "git fetch --quiet")
+
 	branch, _ := client.RunCaptured(svc.Workdir, runAsUser, "git rev-parse --abbrev-ref HEAD")
 	branch = strings.TrimSpace(branch)
 
-	commit, _ := client.RunCaptured(svc.Workdir, runAsUser, "git log --oneline -1")
+	commit, _ := client.RunCaptured(svc.Workdir, runAsUser, "git log --oneline -1 @{u}")
 	commit = strings.TrimSpace(commit)
 
 	if branch == "" {
