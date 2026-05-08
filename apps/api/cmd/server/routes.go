@@ -98,6 +98,7 @@ func registerRoutes(app *fiber.App, pool *pgxpool.Pool, ks *appssh.KeyStore, use
 	// ── Deployments ───────────────────────────────────────────────
 	dh := handler.NewDeployHandler(serviceRepo, serverRepo, deploymentRepo, evsRepo, ks)
 	protected.Post("/services/:serviceId/deploy", middleware.RequireAdmin, dh.TriggerDeploy)
+	protected.Post("/deployments/:deploymentId/cancel", middleware.RequireAdmin, dh.CancelDeploy)
 	protected.Get("/services/:serviceId/deployments", dh.ListDeployments)
 	protected.Get("/deployments/:deploymentId", dh.GetDeployment)
 	protected.Get("/deployments/:deploymentId/stream", dh.StreamDeployment)

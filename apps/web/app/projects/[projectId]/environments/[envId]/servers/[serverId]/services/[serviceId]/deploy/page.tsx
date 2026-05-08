@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { DeployLog } from "@/components/deploy/DeployLog";
 import { toast } from "@/components/ui/use-toast";
-import { Rocket, RefreshCw, Clock, AlertTriangle, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Rocket, RefreshCw, Clock, AlertTriangle, X, ChevronLeft, ChevronRight, StopCircle } from "lucide-react";
 import type { Deployment, DeployStatus } from "@/lib/types";
 
 interface PageProps {
@@ -35,6 +35,7 @@ const STATUS_VARIANTS: Record<
   running: "secondary",
   success: "success",
   failed: "destructive",
+  cancelled: "warning",
 };
 
 function formatDuration(started?: string, finished?: string): string {
@@ -46,6 +47,7 @@ function formatDuration(started?: string, finished?: string): string {
 
 export default function DeployPage({ params }: PageProps) {
   const [deploying, setDeploying] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [activeDeploymentId, setActiveDeploymentId] = useState<string | null>(
     null,
   );
@@ -133,6 +135,20 @@ export default function DeployPage({ params }: PageProps) {
     }
   };
 
+  const handleCancel = async () => {
+    if (!activeDeploymentId) return;
+    setCancelling(true);
+    try {
+      await api.deployments.cancel(activeDeploymentId);
+      toast({ title: "Cancel requested", description: "Deployment is being stopped." });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to cancel";
+      toast({ title: "Cancel failed", description: msg, variant: "destructive" });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const viewDeployment = (d: Deployment) => {
     setActiveDeploymentId(d.id);
     setActiveStatus(d.status);
@@ -148,18 +164,31 @@ export default function DeployPage({ params }: PageProps) {
             Trigger a deployment and watch live logs.
           </p>
         </div>
-        <Button
-          onClick={handleDeploy}
-          disabled={deploying || activeStatus === "running"}
-          size="lg"
-        >
-          <Rocket className="h-4 w-4 mr-2" />
-          {deploying
-            ? "Triggering..."
-            : activeStatus === "running"
-              ? "Deploying..."
-              : "Deploy Now"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {activeStatus === "running" && activeDeploymentId && (
+            <Button
+              variant="destructive"
+              size="lg"
+              onClick={handleCancel}
+              disabled={cancelling}
+            >
+              <StopCircle className="h-4 w-4 mr-2" />
+              {cancelling ? "Cancelling..." : "Cancel Deploy"}
+            </Button>
+          )}
+          <Button
+            onClick={handleDeploy}
+            disabled={deploying || activeStatus === "running"}
+            size="lg"
+          >
+            <Rocket className="h-4 w-4 mr-2" />
+            {deploying
+              ? "Triggering..."
+              : activeStatus === "running"
+                ? "Deploying..."
+                : "Deploy Now"}
+          </Button>
+        </div>
       </div>
 
       {/* Page-level error banner */}

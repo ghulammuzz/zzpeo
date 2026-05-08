@@ -264,6 +264,8 @@ export const api = {
       get<Deployment[]>(`/services/${serviceId}/deployments`),
     get: (deploymentId: string) =>
       get<Deployment>(`/deployments/${deploymentId}`),
+    cancel: (deploymentId: string) =>
+      post<{ cancelled: boolean }>(`/deployments/${deploymentId}/cancel`),
     stream: (deploymentId: string) => {
       const token = typeof window !== "undefined" ? localStorage.getItem("zzpeo_token") : null
       const url = token

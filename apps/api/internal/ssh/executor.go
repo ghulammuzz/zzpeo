@@ -84,11 +84,23 @@ func (e *Executor) RunCommands(
 			return fmt.Errorf("start command [%s]: %w", cmd, err)
 		}
 
+		// Kill the remote process when context is cancelled.
+		sessionDone := make(chan struct{})
+		go func() {
+			select {
+			case <-ctx.Done():
+				_ = session.Signal(gossh.SIGTERM)
+				session.Close()
+			case <-sessionDone:
+			}
+		}()
+
 		// Wait for both scanners to drain before calling session.Wait.
 		<-done
 		<-done
 
 		waitErr := session.Wait()
+		close(sessionDone)
 		session.Close()
 
 		if waitErr != nil {

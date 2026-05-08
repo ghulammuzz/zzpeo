@@ -86,6 +86,9 @@ func (b *deployBroadcast) close() {
 // deployBroadcasters maps deploymentID (string) → *deployBroadcast for active deploys.
 var deployBroadcasters sync.Map
 
+// deployCancels maps deploymentID (string) → context.CancelFunc for in-flight deploys.
+var deployCancels sync.Map
+
 // activeServices maps serviceID (string) → deploymentID to guard against
 // concurrent deploys of the same service.
 var activeServices sync.Map
@@ -209,10 +212,13 @@ func (h *DeployHandler) TriggerDeploy(c *fiber.Ctx) error {
 	bc := &deployBroadcast{}
 	deployBroadcasters.Store(dep.ID.String(), bc)
 
-	go func() {
-		bgCtx := context.Background()
+	bgCtx, cancelDeploy := context.WithCancel(context.Background())
+	deployCancels.Store(dep.ID.String(), cancelDeploy)
 
+	go func() {
 		defer func() {
+			cancelDeploy()
+			deployCancels.Delete(dep.ID.String())
 			bc.close()
 			deployBroadcasters.Delete(dep.ID.String())
 			activeServices.Delete(serviceID.String())
@@ -283,7 +289,11 @@ func (h *DeployHandler) TriggerDeploy(c *fiber.Ctx) error {
 		finished := time.Now()
 		status := model.StatusSuccess
 
-		if finalErr != nil {
+		if bgCtx.Err() != nil {
+			// Context cancelled — deployment was explicitly cancelled.
+			status = model.StatusCancelled
+			buildLog += "\nDeploy cancelled."
+		} else if finalErr != nil {
 			status = model.StatusFailed
 			buildLog += fmt.Sprintf("\nERROR: %v", finalErr)
 		}
@@ -416,4 +426,23 @@ func (h *DeployHandler) GetDeployment(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(dep)
+}
+
+// CancelDeploy handles POST /deployments/:deploymentId/cancel
+// Signals the running deploy goroutine to stop via context cancellation.
+func (h *DeployHandler) CancelDeploy(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("deploymentId"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid deployment id"})
+	}
+
+	val, ok := deployCancels.Load(id.String())
+	if !ok {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "deployment is not active"})
+	}
+
+	cancel := val.(context.CancelFunc)
+	cancel()
+
+	return c.JSON(fiber.Map{"cancelled": true})
 }

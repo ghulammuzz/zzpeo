@@ -10,10 +10,11 @@ import (
 type DeployStatus string
 
 const (
-	StatusPending DeployStatus = "pending"
-	StatusRunning DeployStatus = "running"
-	StatusSuccess DeployStatus = "success"
-	StatusFailed  DeployStatus = "failed"
+	StatusPending   DeployStatus = "pending"
+	StatusRunning   DeployStatus = "running"
+	StatusSuccess   DeployStatus = "success"
+	StatusFailed    DeployStatus = "failed"
+	StatusCancelled DeployStatus = "cancelled"
 )
 
 // Deployment records one execution of a service's deploy pipeline.

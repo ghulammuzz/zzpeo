@@ -71,6 +71,7 @@ function BuildTerminal({
     running: "text-blue-400",
     success: "text-green-400",
     failed: "text-red-400",
+    cancelled: "text-yellow-400",
   }[status];
 
   const statusLabel = {
@@ -78,6 +79,7 @@ function BuildTerminal({
     running: "Running...",
     success: "Succeeded",
     failed: "Failed",
+    cancelled: "Cancelled",
   }[status];
 
   return (
