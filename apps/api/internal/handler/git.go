@@ -114,7 +114,7 @@ func (h *GitHandler) GitPull(c *fiber.Ctx) error {
 		runAsUser = *svc.RunAsUser
 	}
 
-	output, pullErr := client.RunCaptured(svc.Workdir, runAsUser, "git pull")
+	output, pullErr := client.RunCaptured(svc.Workdir, runAsUser, "git pull --rebase")
 	output = strings.TrimSpace(output)
 
 	if pullErr != nil {
