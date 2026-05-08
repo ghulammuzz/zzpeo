@@ -7,6 +7,7 @@ import { api } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 const SEGMENT_LABELS: Record<string, string> = {
+  dashboard: "dashboard",
   projects: "projects",
   environments: "envs",
   "env-vars": "env-vars",
@@ -16,6 +17,9 @@ const SEGMENT_LABELS: Record<string, string> = {
   nginx: "nginx",
   deploy: "deploy",
   new: "new",
+  admin: "admin",
+  users: "users",
+  register: "register",
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -67,7 +71,7 @@ export function Breadcrumbs() {
     <nav className="flex items-center gap-0 text-xs text-muted-foreground px-4 py-0 border-b border-border bg-background/60 overflow-hidden h-9 flex-shrink-0">
       {/* Home */}
       <Link
-        href="/projects"
+        href="/dashboard"
         className="flex items-center gap-1.5 font-mono text-neon-cyan/70 hover:text-neon-cyan transition-colors shrink-0 pr-2"
       >
         <span className="text-neon-cyan/40 select-none">▸</span>

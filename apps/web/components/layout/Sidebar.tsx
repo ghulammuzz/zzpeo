@@ -322,13 +322,13 @@ export function Sidebar() {
           <Tooltip>
             <TooltipTrigger asChild>
               <Link
-                href="/projects"
+                href="/dashboard"
                 className="flex h-9 w-9 items-center justify-center rounded-sm mb-3 text-neon-cyan hover:shadow-[0_0_12px_rgba(0,229,255,0.4)] transition-all"
               >
                 <Rocket className="h-[18px] w-[18px]" />
               </Link>
             </TooltipTrigger>
-            <TooltipContent side="right" className="font-mono text-xs">zzpeo</TooltipContent>
+            <TooltipContent side="right" className="font-mono text-xs">dashboard</TooltipContent>
           </Tooltip>
 
           {/* Divider */}
