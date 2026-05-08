@@ -289,9 +289,10 @@ export default function DashboardPage() {
             empty={data?.objects.length === 0}
           >
             {data?.objects.slice(0, 3).map((o) => (
-              <div
+              <Link
                 key={o.id}
-                className="flex items-center gap-2 py-1.5 px-2 rounded-sm"
+                href={`/projects/${o.project_id}/environments/${o.env_id}/objects`}
+                className="flex items-center gap-2 py-1.5 px-2 rounded-sm hover:bg-neon-green/5 transition-colors group"
               >
                 <span
                   className="flex-shrink-0 font-mono text-[9px] px-1.5 py-0.5 rounded-sm border tracking-wider uppercase"
@@ -299,13 +300,13 @@ export default function DashboardPage() {
                 >
                   {o.object_type_name}
                 </span>
-                <span className="flex-1 min-w-0 text-xs font-medium text-foreground/80 truncate">
+                <span className="flex-1 min-w-0 text-xs font-medium text-foreground/80 group-hover:text-neon-green/80 truncate transition-colors">
                   {o.name}
                 </span>
                 <span className="flex-shrink-0 font-mono text-[10px] text-muted-foreground/30 truncate max-w-[80px]">
                   {o.env_name}
                 </span>
-              </div>
+              </Link>
             ))}
           </Section>
 
