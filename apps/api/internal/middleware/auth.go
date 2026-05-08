@@ -15,14 +15,21 @@ const (
 )
 
 // Auth validates the Bearer JWT and stores claims in Locals.
+// Falls back to ?token= query param for SSE endpoints (EventSource cannot set headers).
 func Auth(secret []byte) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		var tokenStr string
+
 		header := c.Get("Authorization")
-		if !strings.HasPrefix(header, "Bearer ") {
-			return fiber.NewError(fiber.StatusUnauthorized, "missing or invalid authorization header")
+		if strings.HasPrefix(header, "Bearer ") {
+			tokenStr = strings.TrimPrefix(header, "Bearer ")
+		} else {
+			tokenStr = c.Query("token")
 		}
 
-		tokenStr := strings.TrimPrefix(header, "Bearer ")
+		if tokenStr == "" {
+			return fiber.NewError(fiber.StatusUnauthorized, "missing or invalid authorization header")
+		}
 		claims, err := jwt.Verify(tokenStr, secret)
 		if err != nil {
 			return fiber.NewError(fiber.StatusUnauthorized, "invalid or expired token")
