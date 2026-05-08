@@ -219,13 +219,17 @@ export function EnvVarsEditor({
 
   // ── reveal ────────────────────────────────────────────────────
 
-  const ensureRevealed = useCallback(async () => {
-    if (hasRevealed) return
+  const ensureRevealed = useCallback(async (): Promise<boolean> => {
+    if (hasRevealed) return true
     try {
       const data = await revealFn()
       setRevealedMap(new Map(data.map((d) => [d.key, d.value])))
       setHasRevealed(true)
-    } catch { /* best-effort */ }
+      return true
+    } catch {
+      toast({ title: "Failed to reveal values", variant: "destructive" })
+      return false
+    }
   }, [hasRevealed, revealFn])
 
   // ── row helpers ───────────────────────────────────────────────
@@ -263,7 +267,10 @@ export function EnvVarsEditor({
   }
 
   const toggleShowRow = async (i: number) => {
-    if (!shownRows.has(i)) await ensureRevealed()
+    if (!shownRows.has(i)) {
+      const ok = await ensureRevealed()
+      if (!ok) return
+    }
     setShownRows((prev) => {
       const next = new Set(prev)
       next.has(i) ? next.delete(i) : next.add(i)
@@ -318,14 +325,18 @@ export function EnvVarsEditor({
   // ── show all ──────────────────────────────────────────────────
 
   const toggleShowAll = async () => {
-    if (!showAll) await ensureRevealed()
+    if (!showAll) {
+      const ok = await ensureRevealed()
+      if (!ok) return
+    }
     setShowAll((v) => !v)
   }
 
   // ── copy ──────────────────────────────────────────────────────
 
   const handleCopy = async () => {
-    await ensureRevealed()
+    const ok = await ensureRevealed()
+    if (!ok) return
     const text = rows
       .filter((r) => r.key.trim())
       .map((r) => {
