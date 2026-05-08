@@ -216,9 +216,9 @@ export default function DashboardPage() {
       {/* Stats strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <Stat label="Projects"  value={data?.projects.length  ?? 0} href="/projects"     />
-        <Stat label="Servers"   value={data?.servers.length   ?? 0} href="/projects"     />
-        <Stat label="Services"  value={data?.services.length  ?? 0} href="/projects"     />
-        <Stat label="Objects"   value={data?.objects.length   ?? 0} href="/projects"     />
+        <Stat label="Servers"   value={data?.servers.length   ?? 0} href="/servers"      />
+        <Stat label="Services"  value={data?.services.length  ?? 0} href="/services"     />
+        <Stat label="Objects"   value={data?.objects.length   ?? 0} href="/objects"      />
         <Stat label="Env Sets"  value={data?.envSets.length   ?? 0} href="/env-var-sets" />
       </div>
 
@@ -249,7 +249,7 @@ export default function DashboardPage() {
           icon={Terminal}
           title="Services"
           count={data?.services.length ?? 0}
-          href="/projects"
+          href="/services"
           loading={loading}
           empty={data?.services.length === 0}
         >
@@ -270,7 +270,7 @@ export default function DashboardPage() {
             icon={Server}
             title="Servers"
             count={data?.servers.length ?? 0}
-            href="/projects"
+            href="/servers"
             loading={loading}
             empty={data?.servers.length === 0}
           >
@@ -288,7 +288,7 @@ export default function DashboardPage() {
             icon={Package}
             title="Objects"
             count={data?.objects.length ?? 0}
-            href="/projects"
+            href="/objects"
             loading={loading}
             empty={data?.objects.length === 0}
           >
