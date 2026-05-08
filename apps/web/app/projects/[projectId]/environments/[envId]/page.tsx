@@ -169,7 +169,7 @@ export default function EnvironmentOverviewPage({ params }: PageProps) {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <Link href={`${basePath}/servers`}>
           <div className="relative rounded-sm border border-border bg-card px-4 py-3 overflow-hidden hover:border-neon-cyan/30 transition-colors cursor-pointer">
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-neon-cyan/30 to-transparent" />
@@ -192,13 +192,6 @@ export default function EnvironmentOverviewPage({ params }: PageProps) {
           </div>
         </Link>
 
-        <Link href={`${basePath}/env-vars`}>
-          <div className="relative rounded-sm border border-border bg-card px-4 py-3 overflow-hidden hover:border-neon-cyan/30 transition-colors cursor-pointer">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-neon-cyan/30 to-transparent" />
-            <p className="text-2xl font-bold font-mono text-neon-cyan">→</p>
-            <p className="text-[10px] font-mono tracking-widest text-muted-foreground uppercase mt-0.5">Env Vars</p>
-          </div>
-        </Link>
       </div>
 
       {/* Server list */}
