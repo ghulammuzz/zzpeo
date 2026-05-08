@@ -17,7 +17,7 @@ export default function LoginPage() {
     setMounted(true)
     // Redirect if already logged in
     if (getCurrentUser()) {
-      router.replace("/projects")
+      router.replace("/dashboard")
     }
   }, [router])
 
@@ -31,7 +31,7 @@ export default function LoginPage() {
     try {
       const res = await api.auth.login({ username, password })
       setToken(res.token)
-      router.replace("/projects")
+      router.replace("/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed")
     } finally {

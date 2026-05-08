@@ -34,7 +34,7 @@ export default function RegisterPage({ params }: PageProps) {
     try {
       const res = await api.auth.register(params.token, { password })
       setToken(res.token)
-      router.replace("/projects")
+      router.replace("/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed")
     } finally {
