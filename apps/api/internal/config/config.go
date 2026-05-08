@@ -10,15 +10,17 @@ import (
 
 // Config holds all application configuration loaded from environment variables.
 type Config struct {
-	DatabaseURL string
-	SecretKey   []byte // 32 raw bytes decoded from APP_SECRET_KEY hex string
-	APIPort     string
+	DatabaseURL   string
+	SecretKey     []byte // 32 raw bytes decoded from APP_SECRET_KEY hex string
+	APIPort       string
+	AdminUsername string // seed first admin on startup if no admin exists
+	AdminPassword string
+	AppURL        string // frontend base URL, used for registration links
 }
 
 // Load reads a .env file (if present) then environment variables, validates
 // required values, and returns a populated Config.
 func Load() (*Config, error) {
-	// Attempt to load a .env file; not fatal if it doesn't exist.
 	_ = godotenv.Load()
 
 	databaseURL := os.Getenv("DATABASE_URL")
@@ -49,9 +51,17 @@ func Load() (*Config, error) {
 		apiPort = "8080"
 	}
 
+	appURL := os.Getenv("APP_URL")
+	if appURL == "" {
+		appURL = "http://localhost:3000"
+	}
+
 	return &Config{
-		DatabaseURL: databaseURL,
-		SecretKey:   secretBytes,
-		APIPort:     apiPort,
+		DatabaseURL:   databaseURL,
+		SecretKey:     secretBytes,
+		APIPort:       apiPort,
+		AdminUsername: os.Getenv("ADMIN_USERNAME"),
+		AdminPassword: os.Getenv("ADMIN_PASSWORD"),
+		AppURL:        appURL,
 	}, nil
 }

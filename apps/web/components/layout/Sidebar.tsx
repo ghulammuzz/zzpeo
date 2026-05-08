@@ -11,10 +11,12 @@ import {
 import {
   FolderKanban, Globe, Server, Terminal, Package,
   Rocket, ChevronLeft, ChevronRight, X, Plus, KeyRound, Search,
+  LogOut, Shield,
 } from "lucide-react"
 import type {
   Project, GlobalServer, GlobalService, GlobalObject, EnvVarSet,
 } from "@/lib/types"
+import { getCurrentUser, logout } from "@/lib/auth"
 
 const PAGE_SIZE = 10
 
@@ -303,6 +305,7 @@ function TabPanel({ tab, pathname }: { tab: TabKey; pathname: string }) {
 export function Sidebar() {
   const pathname = usePathname()
   const [activeTab, setActiveTab] = useState<TabKey | null>(null)
+  const currentUser = getCurrentUser()
 
   const toggle = (key: TabKey) =>
     setActiveTab((prev) => (prev === key ? null : key))
@@ -355,6 +358,41 @@ export function Sidebar() {
           ))}
 
           <div className="flex-1" />
+
+          {/* Admin link */}
+          {currentUser?.role === "admin" && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/admin/users"
+                  className={cn(
+                    "flex h-9 w-9 items-center justify-center rounded-sm transition-all duration-150 mb-0.5",
+                    pathname.startsWith("/admin")
+                      ? "text-neon-cyan bg-neon-cyan/8"
+                      : "text-muted-foreground/40 hover:text-neon-cyan hover:bg-neon-cyan/8"
+                  )}
+                >
+                  <Shield className="h-[16px] w-[16px]" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-mono text-xs">Admin</TooltipContent>
+            </Tooltip>
+          )}
+
+          {/* User + Logout */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={logout}
+                className="flex h-9 w-9 items-center justify-center rounded-sm text-muted-foreground/40 hover:text-neon-magenta hover:bg-neon-magenta/8 transition-all mb-1"
+              >
+                <LogOut className="h-[16px] w-[16px]" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="font-mono text-xs">
+              {currentUser?.username ?? "logout"}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </TooltipProvider>
 

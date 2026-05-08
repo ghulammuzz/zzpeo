@@ -20,70 +20,155 @@ import type {
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
 
-async function parseError(
-  res: Response,
-  method: string,
-  path: string,
-): Promise<Error> {
+function authHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {}
+  const token = localStorage.getItem("zzpeo_token")
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+function handleUnauthorized() {
+  if (typeof window === "undefined") return
+  localStorage.removeItem("zzpeo_token")
+  document.cookie = "zzpeo_session=; path=/; max-age=0"
+  window.location.href = "/login"
+}
+
+async function parseError(res: Response, method: string, path: string): Promise<Error> {
   try {
-    const data = await res.json();
-    const msg = data?.error ?? data?.message ?? res.statusText;
-    return new Error(msg);
+    const data = await res.json()
+    const msg = data?.error ?? data?.message ?? res.statusText
+    return new Error(msg)
   } catch {
-    return new Error(
-      `${method} ${path} failed: ${res.status} ${res.statusText}`,
-    );
+    return new Error(`${method} ${path} failed: ${res.status} ${res.statusText}`)
   }
 }
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { cache: "no-store" });
-  if (!res.ok) throw await parseError(res, "GET", path);
-  return res.json() as Promise<T>;
+  const res = await fetch(`${API_URL}${path}`, {
+    cache: "no-store",
+    headers: authHeaders(),
+  })
+  if (res.status === 401) { handleUnauthorized(); throw new Error("Unauthorized") }
+  if (!res.ok) throw await parseError(res, "GET", path)
+  return res.json() as Promise<T>
 }
 
 async function post<T>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: body !== undefined ? JSON.stringify(body) : undefined,
     cache: "no-store",
-  });
-  if (!res.ok) throw await parseError(res, "POST", path);
-  return res.json() as Promise<T>;
+  })
+  if (res.status === 401) { handleUnauthorized(); throw new Error("Unauthorized") }
+  if (!res.ok) throw await parseError(res, "POST", path)
+  return res.json() as Promise<T>
 }
 
 async function patch<T>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: body !== undefined ? JSON.stringify(body) : undefined,
     cache: "no-store",
-  });
-  if (!res.ok) throw await parseError(res, "PATCH", path);
-  return res.json() as Promise<T>;
+  })
+  if (res.status === 401) { handleUnauthorized(); throw new Error("Unauthorized") }
+  if (!res.ok) throw await parseError(res, "PATCH", path)
+  return res.json() as Promise<T>
 }
 
 async function put<T>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: body !== undefined ? JSON.stringify(body) : undefined,
     cache: "no-store",
-  });
-  if (!res.ok) throw await parseError(res, "PUT", path);
-  return res.json() as Promise<T>;
+  })
+  if (res.status === 401) { handleUnauthorized(); throw new Error("Unauthorized") }
+  if (!res.ok) throw await parseError(res, "PUT", path)
+  return res.json() as Promise<T>
 }
 
 async function del(path: string): Promise<void> {
   const res = await fetch(`${API_URL}${path}`, {
     method: "DELETE",
     cache: "no-store",
-  });
-  if (!res.ok) throw await parseError(res, "DELETE", path);
+    headers: authHeaders(),
+  })
+  if (res.status === 401) { handleUnauthorized(); return }
+  if (!res.ok) throw await parseError(res, "DELETE", path)
 }
 
+// ── Auth ──────────────────────────────────────────────────────────
+
+async function postPublic<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+    cache: "no-store",
+  })
+  if (!res.ok) throw await parseError(res, "POST", path)
+  return res.json() as Promise<T>
+}
+
+async function getPublic<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, { cache: "no-store" })
+  if (!res.ok) throw await parseError(res, "GET", path)
+  return res.json() as Promise<T>
+}
+
+export interface AuthResponse {
+  token: string
+  user: { id: string; username: string; role: "admin" | "user" }
+}
+
+export interface MeResponse {
+  id: string
+  username: string
+  role: "admin" | "user"
+  project_ids: string[]
+}
+
+export interface AdminUser {
+  id: string
+  username: string
+  role: "admin" | "user"
+  registered: boolean
+  created_at: string
+  reg_url?: string
+}
+
+export interface UserPermission {
+  id: string
+  user_id: string
+  project_id: string
+  project_name: string
+  created_at: string
+}
+
+// ── API client ────────────────────────────────────────────────────
+
 export const api = {
+  auth: {
+    login: (body: { username: string; password: string }) =>
+      postPublic<AuthResponse>("/auth/login", body),
+    register: (token: string, body: { password: string }) =>
+      postPublic<AuthResponse>(`/auth/register/${token}`, body),
+    registerInfo: (token: string) =>
+      getPublic<{ username: string; expires_at: string }>(`/auth/register-info/${token}`),
+    me: () => get<MeResponse>("/auth/me"),
+  },
+  admin: {
+    listUsers: () => get<AdminUser[]>("/admin/users"),
+    createUser: (body: { username: string; role: string }) =>
+      post<AdminUser>("/admin/users", body),
+    deleteUser: (id: string) => del(`/admin/users/${id}`),
+    regenerateToken: (id: string) => post<{ reg_url: string }>(`/admin/users/${id}/reg-token`),
+    listPermissions: (userId: string) => get<UserPermission[]>(`/admin/users/${userId}/permissions`),
+    setPermissions: (userId: string, projectIds: string[]) =>
+      put<void>(`/admin/users/${userId}/permissions`, { project_ids: projectIds }),
+  },
   projects: {
     list: () => get<Project[]>("/projects"),
     create: (body: { name: string; slug: string; description?: string }) =>
@@ -96,10 +181,8 @@ export const api = {
   environments: {
     list: (projectId: string) =>
       get<Environment[]>(`/projects/${projectId}/environments`),
-    create: (
-      projectId: string,
-      body: { name: string; slug: string; type: string },
-    ) => post<Environment>(`/projects/${projectId}/environments`, body),
+    create: (projectId: string, body: { name: string; slug: string; type: string }) =>
+      post<Environment>(`/projects/${projectId}/environments`, body),
     get: (projectId: string, envId: string) =>
       get<Environment>(`/projects/${projectId}/environments/${envId}`),
     update: (projectId: string, envId: string, body: Partial<Environment>) =>
@@ -124,14 +207,9 @@ export const api = {
       patch<Server>(`/environments/${envId}/servers/${serverId}`, body),
     delete: (envId: string, serverId: string) =>
       del(`/environments/${envId}/servers/${serverId}`),
-    testConnection: (
-      envId: string,
-      serverId: string,
-      body?: { confirm?: boolean },
-    ) =>
+    testConnection: (envId: string, serverId: string, body?: { confirm?: boolean }) =>
       post<{ fingerprint: string; latency_ms: number }>(
-        `/environments/${envId}/servers/${serverId}/test-connection`,
-        body,
+        `/environments/${envId}/servers/${serverId}/test-connection`, body,
       ),
   },
   services: {
@@ -166,8 +244,7 @@ export const api = {
       del(`/services/${serviceId}/env-vars/${key}`),
   },
   objects: {
-    list: (envId: string) =>
-      get<ObjectItem[]>(`/environments/${envId}/objects`),
+    list: (envId: string) => get<ObjectItem[]>(`/environments/${envId}/objects`),
     create: (envId: string, body: unknown) =>
       post<ObjectItem>(`/environments/${envId}/objects`, body),
     get: (envId: string, objectId: string) =>
@@ -180,21 +257,26 @@ export const api = {
   },
   deployments: {
     trigger: (serviceId: string) =>
-      post<{ deployment_id: string; status: string }>(
-        `/services/${serviceId}/deploy`,
-      ),
+      post<{ deployment_id: string; status: string }>(`/services/${serviceId}/deploy`),
     list: (serviceId: string) =>
       get<Deployment[]>(`/services/${serviceId}/deployments`),
     get: (deploymentId: string) =>
       get<Deployment>(`/deployments/${deploymentId}`),
-    stream: (deploymentId: string) =>
-      new EventSource(`${API_URL}/deployments/${deploymentId}/stream`),
+    stream: (deploymentId: string) => {
+      const token = typeof window !== "undefined" ? localStorage.getItem("zzpeo_token") : null
+      const url = token
+        ? `${API_URL}/deployments/${deploymentId}/stream?token=${encodeURIComponent(token)}`
+        : `${API_URL}/deployments/${deploymentId}/stream`
+      return new EventSource(url)
+    },
   },
   logs: {
     stream: (serviceId: string, tail?: number, since?: string) => {
       const params = new URLSearchParams()
       if (tail) params.set("tail", String(tail))
       if (since) params.set("since", since)
+      const token = typeof window !== "undefined" ? localStorage.getItem("zzpeo_token") : null
+      if (token) params.set("token", token)
       const qs = params.toString()
       return new EventSource(`${API_URL}/services/${serviceId}/logs${qs ? "?" + qs : ""}`)
     },
@@ -230,4 +312,4 @@ export const api = {
     listServices: () => get<GlobalService[]>("/services"),
     listObjects: () => get<GlobalObject[]>("/objects"),
   },
-};
+}

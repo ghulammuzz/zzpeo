@@ -1,8 +1,7 @@
 import type { Metadata } from "next"
 import { Chakra_Petch, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
-import { Sidebar } from "@/components/layout/Sidebar"
-import { Breadcrumbs } from "@/components/layout/Breadcrumbs"
+import { AppShell } from "@/components/layout/AppShell"
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 
@@ -23,11 +22,7 @@ export const metadata: Metadata = {
   description: "Internal server and deployment management platform",
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
@@ -35,19 +30,8 @@ export default function RootLayout({
       className={`dark ${chakraPetch.variable} ${jetbrainsMono.variable}`}
     >
       <body className="font-sans antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
-          <div className="flex h-screen overflow-hidden">
-            <Sidebar />
-            <div className="flex flex-1 flex-col overflow-hidden">
-              <Breadcrumbs />
-              <main className="flex-1 overflow-y-auto p-6">{children}</main>
-            </div>
-          </div>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+          <AppShell>{children}</AppShell>
           <Toaster />
         </ThemeProvider>
       </body>
