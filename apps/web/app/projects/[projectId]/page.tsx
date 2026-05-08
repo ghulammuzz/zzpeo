@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -292,21 +293,17 @@ export default function ProjectDetailPage({ params }: PageProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Delete project dialog */}
-      <Dialog open={confirmDeleteProject} onOpenChange={(open) => !open && setConfirmDeleteProject(false)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Delete Project</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Delete <strong>{project.name}</strong>? All environments and data will be lost. This cannot be undone.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDeleteProject(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteProject} disabled={deletingProject}>
-              {deletingProject ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmDeleteProject}
+        onOpenChange={(open) => !open && setConfirmDeleteProject(false)}
+        title="// DELETE PROJECT"
+        description={<>Delete <strong className="text-foreground">{project.name}</strong>? All environments, servers, services, and deployments will be lost. This cannot be undone.</>}
+        confirmText="Delete Project"
+        variant="destructive"
+        loading={deletingProject}
+        loadingText="Deleting..."
+        onConfirm={handleDeleteProject}
+      />
 
       {/* Edit env dialog */}
       <Dialog open={!!editEnv} onOpenChange={(open) => !open && setEditEnv(null)}>

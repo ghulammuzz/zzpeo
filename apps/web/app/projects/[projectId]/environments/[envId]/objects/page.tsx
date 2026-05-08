@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
 import { Plus, Trash2, Pencil, Package } from "lucide-react"
@@ -28,6 +29,9 @@ export default function ObjectsPage({ params }: PageProps) {
   const [editObject, setEditObject] = useState<ObjectItem | null>(null)
   const [editForm, setEditForm] = useState({ ...emptyForm })
   const [saving, setSaving] = useState(false)
+
+  const [deleteObject, setDeleteObject] = useState<ObjectItem | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -104,13 +108,18 @@ export default function ObjectsPage({ params }: PageProps) {
     }
   }
 
-  const handleDelete = async (objectId: string) => {
+  const handleDelete = async () => {
+    if (!deleteObject) return
+    setDeleting(true)
     try {
-      await api.objects.delete(params.envId, objectId)
+      await api.objects.delete(params.envId, deleteObject.id)
       toast({ title: "Object deleted" })
+      setDeleteObject(null)
       await load()
     } catch (err) {
       toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to delete", variant: "destructive" })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -179,7 +188,7 @@ export default function ObjectsPage({ params }: PageProps) {
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 text-neon-magenta hover:text-neon-magenta hover:bg-neon-magenta/8"
-                      onClick={() => handleDelete(obj.id)}
+                      onClick={() => setDeleteObject(obj)}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
@@ -336,6 +345,18 @@ export default function ObjectsPage({ params }: PageProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteObject}
+        onOpenChange={(open) => !open && setDeleteObject(null)}
+        title="// DELETE OBJECT"
+        description={<>Delete object <strong className="text-foreground">{deleteObject?.name}</strong>? All service links to this object will be removed.</>}
+        confirmText="Delete Object"
+        variant="destructive"
+        loading={deleting}
+        loadingText="Deleting..."
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
@@ -312,21 +313,17 @@ export default function ServerDetailPage({ params }: PageProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Delete server dialog */}
-      <Dialog open={confirmDeleteServer} onOpenChange={(open) => !open && setConfirmDeleteServer(false)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Delete Server</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Delete <strong>{server.name}</strong>? All services will be removed. This cannot be undone.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDeleteServer(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteServer} disabled={deletingServer}>
-              {deletingServer ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmDeleteServer}
+        onOpenChange={(open) => !open && setConfirmDeleteServer(false)}
+        title="// DELETE SERVER"
+        description={<>Delete <strong className="text-foreground">{server.name}</strong>? All services and deployments will be removed. This cannot be undone.</>}
+        confirmText="Delete Server"
+        variant="destructive"
+        loading={deletingServer}
+        loadingText="Deleting..."
+        onConfirm={handleDeleteServer}
+      />
     </div>
   )
 }

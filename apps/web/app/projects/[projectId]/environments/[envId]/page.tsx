@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -284,37 +285,29 @@ export default function EnvironmentOverviewPage({ params }: PageProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Delete env dialog */}
-      <Dialog open={confirmDeleteEnv} onOpenChange={(open) => !open && setConfirmDeleteEnv(false)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Delete Environment</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Delete <strong>{environment.name}</strong>? All servers and data will be removed. This cannot be undone.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDeleteEnv(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteEnv} disabled={deletingEnv}>
-              {deletingEnv ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmDeleteEnv}
+        onOpenChange={(open) => !open && setConfirmDeleteEnv(false)}
+        title="// DELETE ENVIRONMENT"
+        description={<>Delete <strong className="text-foreground">{environment.name}</strong>? All servers, services, and deployments will be removed. This cannot be undone.</>}
+        confirmText="Delete Environment"
+        variant="destructive"
+        loading={deletingEnv}
+        loadingText="Deleting..."
+        onConfirm={handleDeleteEnv}
+      />
 
-      {/* Delete server dialog */}
-      <Dialog open={!!deleteServer} onOpenChange={(open) => !open && setDeleteServer(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Delete Server</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Delete <strong>{deleteServer?.name}</strong>? This cannot be undone.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteServer(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteServer} disabled={deletingServer}>
-              {deletingServer ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={!!deleteServer}
+        onOpenChange={(open) => !open && setDeleteServer(null)}
+        title="// DELETE SERVER"
+        description={<>Delete <strong className="text-foreground">{deleteServer?.name}</strong>? All services and deployments on this server will be removed.</>}
+        confirmText="Delete Server"
+        variant="destructive"
+        loading={deletingServer}
+        loadingText="Deleting..."
+        onConfirm={handleDeleteServer}
+      />
     </div>
   )
 }

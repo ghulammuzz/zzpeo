@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DeployLog } from "@/components/deploy/DeployLog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "@/components/ui/use-toast";
 import { Rocket, RefreshCw, Clock, AlertTriangle, X, ChevronLeft, ChevronRight, StopCircle } from "lucide-react";
 import type { Deployment, DeployStatus } from "@/lib/types";
@@ -48,6 +49,8 @@ function formatDuration(started?: string, finished?: string): string {
 export default function DeployPage({ params }: PageProps) {
   const [deploying, setDeploying] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [confirmDeploy, setConfirmDeploy] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [activeDeploymentId, setActiveDeploymentId] = useState<string | null>(
     null,
   );
@@ -169,7 +172,7 @@ export default function DeployPage({ params }: PageProps) {
             <Button
               variant="destructive"
               size="lg"
-              onClick={handleCancel}
+              onClick={() => setConfirmCancel(true)}
               disabled={cancelling}
             >
               <StopCircle className="h-4 w-4 mr-2" />
@@ -177,7 +180,7 @@ export default function DeployPage({ params }: PageProps) {
             </Button>
           )}
           <Button
-            onClick={handleDeploy}
+            onClick={() => setConfirmDeploy(true)}
             disabled={deploying || activeStatus === "running"}
             size="lg"
           >
@@ -362,6 +365,30 @@ export default function DeployPage({ params }: PageProps) {
           })()}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmDeploy}
+        onOpenChange={setConfirmDeploy}
+        title="// CONFIRM DEPLOY"
+        description="This will trigger a new deployment and execute all deploy steps on the remote server. Proceed?"
+        confirmText="Deploy Now"
+        variant="warning"
+        loading={deploying}
+        loadingText="Triggering..."
+        onConfirm={() => { setConfirmDeploy(false); handleDeploy(); }}
+      />
+
+      <ConfirmDialog
+        open={confirmCancel}
+        onOpenChange={setConfirmCancel}
+        title="// CANCEL DEPLOYMENT"
+        description="This will send SIGTERM to the running deploy process on the server. The deployment will be marked as cancelled."
+        confirmText="Cancel Deploy"
+        variant="destructive"
+        loading={cancelling}
+        loadingText="Cancelling..."
+        onConfirm={() => { setConfirmCancel(false); handleCancel(); }}
+      />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
 import { Pencil, Trash2, KeyRound, X, Plus, ExternalLink } from "lucide-react"
@@ -372,21 +373,17 @@ export default function EnvVarSetDetailPage({ params }: PageProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirmation */}
-      <Dialog open={confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(false)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Delete Env Var Set</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Delete <strong>{set.name}</strong>? All variables and service links will be removed. This cannot be undone.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDelete(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteSet} disabled={deleting}>
-              {deleting ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={(o) => !o && setConfirmDelete(false)}
+        title="// DELETE ENV VAR SET"
+        description={<>Delete <strong className="text-foreground">{set.name}</strong>? All variables and service links will be removed. This cannot be undone.</>}
+        confirmText="Delete Set"
+        variant="destructive"
+        loading={deleting}
+        loadingText="Deleting..."
+        onConfirm={handleDeleteSet}
+      />
     </div>
   )
 }

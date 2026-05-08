@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -623,21 +624,17 @@ export default function ServiceDetailPage({ params }: PageProps) {
         </CardContent>
       </Card>
 
-      {/* Delete dialog */}
-      <Dialog open={confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(false)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Delete Service</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Delete <strong>{service.name}</strong>? All deployments will be removed. This cannot be undone.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDelete(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={(open) => !open && setConfirmDelete(false)}
+        title="// DELETE SERVICE"
+        description={<>Delete <strong className="text-foreground">{service.name}</strong>? All deployments will be removed. This cannot be undone.</>}
+        confirmText="Delete Service"
+        variant="destructive"
+        loading={deleting}
+        loadingText="Deleting..."
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

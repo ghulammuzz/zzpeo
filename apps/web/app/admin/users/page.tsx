@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { toast } from "@/components/ui/use-toast"
 import { Plus, Trash2, Copy, Check, RefreshCw, Shield, User, KeyRound, Lock } from "lucide-react"
 import type { Project } from "@/lib/types"
@@ -32,6 +33,11 @@ export default function AdminUsersPage() {
 
   // Copy tracking
   const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  // Delete confirm
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null)
+  const [deleteUserName, setDeleteUserName] = useState("")
+  const [deleting, setDeleting] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -72,12 +78,17 @@ export default function AdminUsersPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!deleteUserId) return
+    setDeleting(true)
     try {
-      await api.admin.deleteUser(id)
+      await api.admin.deleteUser(deleteUserId)
+      setDeleteUserId(null)
       await load()
     } catch (err) {
       toast({ title: "Error", description: err instanceof Error ? err.message : "Failed", variant: "destructive" })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -270,7 +281,7 @@ export default function AdminUsersPage() {
                   <Button
                     variant="ghost" size="icon"
                     className="h-7 w-7 text-neon-magenta/40 hover:text-neon-magenta hover:bg-neon-magenta/8"
-                    onClick={() => handleDelete(u.id)}
+                    onClick={() => { setDeleteUserId(u.id); setDeleteUserName(u.username) }}
                     title="Delete user"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -384,6 +395,18 @@ export default function AdminUsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteUserId}
+        onOpenChange={(open) => !open && setDeleteUserId(null)}
+        title="// DELETE USER"
+        description={<>Delete user <strong className="text-foreground">{deleteUserName}</strong>? Their account and all permissions will be permanently removed.</>}
+        confirmText="Delete User"
+        variant="destructive"
+        loading={deleting}
+        loadingText="Deleting..."
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }
