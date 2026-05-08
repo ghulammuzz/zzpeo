@@ -11,10 +11,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# NEXT_PUBLIC_* vars must be present at build time (baked into bundle)
-ARG NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
+# API_URL is server-side — passed at runtime, not baked into bundle.
+# NEXT_PUBLIC_API_URL defaults to /api/v1 (relative, uses rewrite proxy).
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -27,6 +26,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+# Pass API_URL at container run time:
+#   docker run -e API_URL=http://your-backend:8080 ...
+ENV API_URL=http://localhost:8080
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs

@@ -17,8 +17,10 @@ import type {
   GlobalObject,
 } from "./types";
 
+// Relative URL — requests go through Next.js rewrite proxy, backend never exposed to client.
+// Set NEXT_PUBLIC_API_URL only to override (e.g. for direct access during local dev without proxy).
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
+  process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 
 function authHeaders(): Record<string, string> {
   if (typeof window === "undefined") return {}
