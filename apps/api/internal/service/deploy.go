@@ -69,7 +69,7 @@ func BuildDeployPlan(svc *model.Service, envVars []ResolvedEnvVar) (*DeployPlan,
 		if err := json.Unmarshal(svc.DeployConfig, &cfg); err != nil {
 			return nil, fmt.Errorf("parse php deploy config: %w", err)
 		}
-		cmds := []string{fmt.Sprintf("git pull --rebase origin %s", cfg.GitBranch)}
+		cmds := []string{fmt.Sprintf("git stash; git pull --rebase origin %s; git stash pop 2>/dev/null || true", cfg.GitBranch)}
 		return &DeployPlan{Steps: append(cmds, cfg.PostPullCmds...)}, nil
 
 	case model.DeployPM2:
@@ -77,7 +77,7 @@ func BuildDeployPlan(svc *model.Service, envVars []ResolvedEnvVar) (*DeployPlan,
 		if err := json.Unmarshal(svc.DeployConfig, &cfg); err != nil {
 			return nil, fmt.Errorf("parse pm2 deploy config: %w", err)
 		}
-		cmds := []string{fmt.Sprintf("git pull --rebase origin %s", cfg.GitBranch)}
+		cmds := []string{fmt.Sprintf("git stash; git pull --rebase origin %s; git stash pop 2>/dev/null || true", cfg.GitBranch)}
 		if cfg.NpmInstall {
 			cmds = append(cmds, "npm install")
 		}
