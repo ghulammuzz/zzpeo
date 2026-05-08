@@ -183,7 +183,7 @@ export default function EnvVarSetDetailPage({ params }: PageProps) {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase mb-1">// ENV VAR SET</p>
           <div className="flex items-center gap-2.5">
@@ -194,7 +194,7 @@ export default function EnvVarSetDetailPage({ params }: PageProps) {
             <p className="text-xs text-muted-foreground/60 font-mono mt-1 ml-7">{set.description}</p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline" size="sm"
             onClick={() => { setEditName(set.name); setEditDesc(set.description ?? ""); setEditingMeta(true) }}

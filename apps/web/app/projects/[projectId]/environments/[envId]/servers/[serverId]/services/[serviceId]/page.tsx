@@ -350,8 +350,8 @@ export default function ServiceDetailPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           {/* Row 1: name + deploy type badge */}
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-2xl font-bold">{service.name}</h1>
@@ -365,7 +365,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
 
           {/* Row 2: workdir + port + domain + run_as_user chips */}
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-            <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-muted-foreground/70">
+            <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-muted-foreground/70 break-all">
               {service.workdir}
             </span>
             {service.local_port && (
@@ -374,7 +374,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
               </span>
             )}
             {service.domain && (
-              <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-neon-blue/70">
+              <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-neon-blue/70 break-all">
                 {service.domain}
               </span>
             )}
@@ -396,14 +396,14 @@ export default function ServiceDetailPage({ params }: PageProps) {
                 <span className="font-mono text-[10px] text-muted-foreground/40">{gitInfo.commit_hash}</span>
               )}
               {gitInfo.commit_message && (
-                <span className="text-xs text-muted-foreground/50 truncate max-w-[300px]">{gitInfo.commit_message}</span>
+                <span className="text-xs text-muted-foreground/50 truncate max-w-[240px] sm:max-w-[300px]">{gitInfo.commit_message}</span>
               )}
             </div>
           )}
         </div>
 
-        {/* Action buttons */}
-        <div className="flex gap-2 shrink-0">
+        {/* Action buttons — wrap on mobile */}
+        <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:shrink-0">
           <Button variant="outline" size="sm" onClick={handleGitPull} disabled={gitPulling}>
             <RefreshCw className={`h-3.5 w-3.5 mr-1 ${gitPulling ? "animate-spin" : ""}`} />
             {gitPulling ? "Pulling..." : "Git Pull"}

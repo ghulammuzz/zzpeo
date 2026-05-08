@@ -153,14 +153,14 @@ export default function EnvVarsPage({ params }: PageProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold">Environment Variables</h1>
           <p className="text-xs text-muted-foreground/60 font-mono mt-0.5">
             key-value pairs · values masked in list view
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
             <FileText className="h-3.5 w-3.5 mr-1.5" />
             Import
@@ -206,7 +206,7 @@ export default function EnvVarsPage({ params }: PageProps) {
 
       {/* Table */}
       {expanded && (
-        <div className="rounded-sm border border-border overflow-hidden">
+        <div className="rounded-sm border border-border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">

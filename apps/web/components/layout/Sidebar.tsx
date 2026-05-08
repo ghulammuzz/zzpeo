@@ -302,7 +302,12 @@ function TabPanel({ tab, pathname }: { tab: TabKey; pathname: string }) {
   }
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean
+  onMobileClose?: () => void
+}
+
+export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname()
   const [activeTab, setActiveTab] = useState<TabKey | null>(null)
   const [currentUser, setCurrentUser] = useState<ReturnType<typeof getCurrentUser>>(null)
@@ -311,6 +316,12 @@ export function Sidebar() {
     setCurrentUser(getCurrentUser())
   }, [])
 
+  // Close panel when navigating on mobile
+  useEffect(() => {
+    if (mobileOpen) onMobileClose?.()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
+
   const toggle = (key: TabKey) =>
     setActiveTab((prev) => (prev === key ? null : key))
 
@@ -318,7 +329,14 @@ export function Sidebar() {
   const activeTabMeta = TABS.find((t) => t.key === activeTab)
 
   return (
-    <aside className="flex h-screen flex-shrink-0 overflow-hidden">
+    <aside className={cn(
+      "flex h-screen flex-shrink-0 overflow-hidden z-50",
+      // Mobile: fixed overlay, slides in/out
+      "fixed inset-y-0 left-0 transition-transform duration-200 ease-in-out",
+      mobileOpen ? "translate-x-0" : "-translate-x-full",
+      // Desktop: relative, always visible
+      "md:relative md:translate-x-0",
+    )}>
       <TooltipProvider delayDuration={400}>
         {/* Activity strip */}
         <div className="flex w-12 flex-shrink-0 flex-col items-center border-r border-border bg-background py-3 gap-0.5">

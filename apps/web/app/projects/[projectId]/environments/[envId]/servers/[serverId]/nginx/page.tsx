@@ -148,9 +148,9 @@ export default function NginxPage({ params }: PageProps) {
               No config files found in <code>/etc/nginx/sites-enabled</code> or <code>/etc/nginx/conf.d</code>.
             </div>
           ) : (
-            <div className="flex gap-4 min-h-[60vh]">
+            <div className="flex flex-col md:flex-row gap-4 min-h-[60vh]">
               {/* File list sidebar */}
-              <div className="w-56 flex-shrink-0 rounded-lg border overflow-hidden">
+              <div className="w-full md:w-56 flex-shrink-0 rounded-lg border overflow-hidden">
                 <div className="px-3 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground flex items-center justify-between">
                   Config Files
                   <Button variant="ghost" size="icon" className="h-5 w-5" onClick={loadFiles}>
@@ -175,9 +175,9 @@ export default function NginxPage({ params }: PageProps) {
               {/* Editor */}
               <div className="flex-1 flex flex-col gap-3 min-w-0">
                 {selectedFile && (
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-mono text-xs text-muted-foreground truncate">{selectedFile}</span>
-                    <div className="flex gap-2 flex-shrink-0">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <span className="font-mono text-xs text-muted-foreground break-all">{selectedFile}</span>
+                    <div className="flex flex-wrap gap-2 sm:flex-shrink-0">
                       <Button variant="outline" size="sm" onClick={() => loadFile(selectedFile)} disabled={fileLoading}>
                         <RefreshCw className={`h-3.5 w-3.5 mr-1 ${fileLoading ? "animate-spin" : ""}`} />
                         Reload

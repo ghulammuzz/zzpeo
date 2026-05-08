@@ -79,7 +79,7 @@ export default function EnvVarSetsListPage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase mb-1">// ENV VAR SETS</p>
           <h1 className="text-xl font-bold">{sets.length > 0 && <span className="text-muted-foreground/50 font-mono text-base mr-2">({sets.length})</span>}Env Var Sets</h1>

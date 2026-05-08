@@ -122,7 +122,7 @@ export default function DashboardPage() {
         <Stat label="Env Sets" value={data?.envSets.length  ?? 0} href="/env-var-sets" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Section icon={FolderKanban} title="Projects" count={data?.projects.length ?? 0} href="/projects" loading={loading} empty={!data?.projects.length}>
           {data?.projects.slice(0, LIMIT).map((p) => (
             <ItemRow key={p.id} href={`/projects/${p.id}`} left={p.name} right={p.slug} />

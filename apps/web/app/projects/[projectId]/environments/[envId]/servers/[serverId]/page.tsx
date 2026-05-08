@@ -139,8 +139,8 @@ export default function ServerDetailPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">{server.name}</h1>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-neon-cyan/70">
@@ -151,13 +151,13 @@ export default function ServerDetailPage({ params }: PageProps) {
             </span>
             <Badge variant="secondary">{server.auth_type}</Badge>
             {server.fingerprint && (
-              <span className="font-mono text-[10px] text-muted-foreground/40 truncate max-w-[200px]">
+              <span className="font-mono text-[10px] text-muted-foreground/40 truncate max-w-[160px] sm:max-w-[200px]">
                 {server.fingerprint}
               </span>
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={openEditServer}>
             <Pencil className="h-3.5 w-3.5 mr-1" />
             Edit

@@ -129,7 +129,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase mb-1">// ADMIN</p>
           <h1 className="text-xl font-bold flex items-center gap-2">
@@ -153,8 +153,8 @@ export default function AdminUsersPage() {
           style={{ borderColor: "rgba(0,229,255,0.3)", background: "rgba(0,229,255,0.05)" }}
         >
           <p className="text-xs font-mono text-neon-cyan/70">// registration link — share with user</p>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 font-mono text-xs text-neon-cyan/80 truncate bg-background/50 border border-border/50 rounded-sm px-2 py-1">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <code className="flex-1 font-mono text-xs text-neon-cyan/80 break-all bg-background/50 border border-border/50 rounded-sm px-2 py-1">
               {createdRegUrl}
             </code>
             <Button size="sm" variant="outline" onClick={() => copyUrl(createdRegUrl, "banner")}>

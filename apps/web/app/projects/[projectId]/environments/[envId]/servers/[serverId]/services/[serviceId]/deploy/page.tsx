@@ -157,14 +157,14 @@ export default function DeployPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Deploy</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Trigger a deployment and watch live logs.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {activeStatus === "running" && activeDeploymentId && (
             <Button
               variant="destructive"
@@ -285,6 +285,7 @@ export default function DeployPage({ params }: PageProps) {
             const pageItems = history.slice((page - 1) * HISTORY_PAGE_SIZE, page * HISTORY_PAGE_SIZE);
             return (
               <>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -331,6 +332,7 @@ export default function DeployPage({ params }: PageProps) {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between px-4 py-3 border-t text-sm text-muted-foreground">
                     <span>

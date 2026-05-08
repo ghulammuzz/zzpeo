@@ -39,7 +39,7 @@ export default function ServersPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[10px] font-mono tracking-[0.15em] text-neon-cyan/50 uppercase mb-1">// GLOBAL</p>
           <h1 className="text-xl font-bold flex items-center gap-2">
