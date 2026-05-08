@@ -121,11 +121,15 @@ export function ServiceLogs({ serviceId, deployType, logConfigType }: Props) {
       })
     })
     es.addEventListener("error", (e) => {
-      setError((e as MessageEvent).data ?? "Stream error")
+      setError((e as MessageEvent).data ?? "Stream connection failed")
       setStreaming(false)
       es.close()
     })
-    es.onerror = () => { setStreaming(false); es.close() }
+    es.onerror = () => {
+      setError((prev) => prev ?? "Stream connection failed — service may be unreachable or session expired")
+      setStreaming(false)
+      es.close()
+    }
   }, [serviceId, tail, since, stop])
 
   // Stop on unmount
