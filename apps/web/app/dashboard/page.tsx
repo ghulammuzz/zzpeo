@@ -159,7 +159,11 @@ interface DashData {
 export default function DashboardPage() {
   const [data, setData] = useState<DashData | null>(null)
   const [loading, setLoading] = useState(true)
-  const user = getCurrentUser()
+  const [user, setUser] = useState<ReturnType<typeof getCurrentUser>>(null)
+
+  useEffect(() => {
+    setUser(getCurrentUser())
+  }, [])
 
   useEffect(() => {
     Promise.all([

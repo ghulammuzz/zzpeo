@@ -305,7 +305,11 @@ function TabPanel({ tab, pathname }: { tab: TabKey; pathname: string }) {
 export function Sidebar() {
   const pathname = usePathname()
   const [activeTab, setActiveTab] = useState<TabKey | null>(null)
-  const currentUser = getCurrentUser()
+  const [currentUser, setCurrentUser] = useState<ReturnType<typeof getCurrentUser>>(null)
+
+  useEffect(() => {
+    setCurrentUser(getCurrentUser())
+  }, [])
 
   const toggle = (key: TabKey) =>
     setActiveTab((prev) => (prev === key ? null : key))
