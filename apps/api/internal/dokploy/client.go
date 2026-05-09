@@ -120,13 +120,15 @@ func (c *Client) GetApplication(ctx context.Context, applicationID string) (*App
 	return &app, nil
 }
 
-// Container is a Docker container as returned by docker.getContainers.
+// Container is a Docker container as returned by Dokploy's docker.getContainers.
+// NOTE: Dokploy wraps Docker Engine API with its own field names.
 type Container struct {
-	ID    string   `json:"Id"`
-	Names []string `json:"Names"` // e.g. ["/shortie-webhook-csxlc3.1.abc123"]
+	ContainerID string `json:"containerId"` // short hash e.g. "d8b98486e3a4"
+	Name        string `json:"name"`        // e.g. "shortie-webhook-csxlc3.1.gpvs2..."
+	State       string `json:"state"`       // "running" | "exited" | ...
 }
 
-// GetContainers returns all running containers from the Dokploy instance.
+// GetContainers returns all containers from the Dokploy instance.
 func (c *Client) GetContainers(ctx context.Context) ([]Container, error) {
 	data, status, err := c.do(ctx, http.MethodGet, "/api/docker.getContainers", nil)
 	if err != nil {
@@ -142,21 +144,23 @@ func (c *Client) GetContainers(ctx context.Context) ([]Container, error) {
 	return containers, nil
 }
 
-// FindContainerID lists all containers and returns the ID of the first one
-// whose name starts with prefix (Docker Swarm names the task container
-// "<service_name>.<replica>.<task_id>", so prefix = app/service name).
+// FindContainerID lists running containers and returns (containerId, fullName) of
+// the first one whose name matches prefix exactly or starts with "<prefix>." / "<prefix>_"
+// (Docker Swarm task naming: "<service>.<replica>.<taskId>").
 func (c *Client) FindContainerID(ctx context.Context, prefix string) (string, string, error) {
 	containers, err := c.GetContainers(ctx)
 	if err != nil {
 		return "", "", err
 	}
 	for _, ct := range containers {
-		for _, name := range ct.Names {
-			// Docker prepends "/" to container names.
-			clean := strings.TrimPrefix(name, "/")
-			if clean == prefix || strings.HasPrefix(clean, prefix+".") || strings.HasPrefix(clean, prefix+"_") {
-				return ct.ID, clean, nil
-			}
+		if ct.State != "running" {
+			continue
+		}
+		name := ct.Name
+		if name == prefix ||
+			strings.HasPrefix(name, prefix+".") ||
+			strings.HasPrefix(name, prefix+"_") {
+			return ct.ContainerID, name, nil
 		}
 	}
 	return "", "", fmt.Errorf("no running container found with name prefix %q", prefix)
@@ -209,19 +213,20 @@ func (c *Client) StreamContainerLogs(ctx context.Context, applicationID string, 
 	if err != nil {
 		return fmt.Errorf("find container: %w", err)
 	}
-	onLine(fmt.Sprintf("// container: %s", fullName))
+	onLine(fmt.Sprintf("// container: %s (id: %s)", fullName, containerID))
 
-	// Fetch initial batch.
+	// Fetch initial batch — note: docker.getContainerLogs returns 404 for Docker
+	// Swarm task containers. Add an SSH key to this server to enable `docker service
+	// logs` streaming which works for Swarm.
 	prev, err := c.GetContainerLogs(ctx, containerID, tail)
 	if err != nil {
-		onLine(fmt.Sprintf("// log fetch error: %v", err))
-		prev = ""
-	} else {
-		for _, line := range strings.Split(prev, "\n") {
-			line = strings.TrimRight(line, "\r")
-			if line != "" {
-				onLine(line)
-			}
+		return fmt.Errorf("Dokploy API does not support log streaming for Docker Swarm containers.\n// Add an SSH key to this Dokploy server in zzpeo Settings → Edit Server → SSH Private Key.\n// Then log streaming will use `docker service logs %s` via SSH.", appName)
+	}
+
+	for _, line := range strings.Split(prev, "\n") {
+		line = strings.TrimRight(line, "\r")
+		if line != "" {
+			onLine(line)
 		}
 	}
 	seenLen := len(prev)
