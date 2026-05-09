@@ -97,6 +97,115 @@ func (c *Client) ListDeployments(ctx context.Context, applicationID string) ([]D
 	return deps, nil
 }
 
+// Application holds the fields we need from Dokploy's application.one response.
+type Application struct {
+	AppName       string `json:"appName"`
+	ContainerName string `json:"containerName"`
+}
+
+// GetApplication returns basic info for an application by ID.
+func (c *Client) GetApplication(ctx context.Context, applicationID string) (*Application, error) {
+	data, status, err := c.do(ctx, http.MethodGet,
+		"/api/application.one?applicationId="+applicationID, nil)
+	if err != nil {
+		return nil, err
+	}
+	if status >= 400 {
+		return nil, fmt.Errorf("application.one returned HTTP %d: %s", status, string(data))
+	}
+	var app Application
+	if err := json.Unmarshal(data, &app); err != nil {
+		return nil, fmt.Errorf("parse application: %w", err)
+	}
+	return &app, nil
+}
+
+// ContainerLogs holds a raw log string from Dokploy's docker log endpoint.
+type ContainerLogs struct {
+	Logs string `json:"logs"`
+}
+
+// GetContainerLogs fetches recent logs for a container by name or ID.
+func (c *Client) GetContainerLogs(ctx context.Context, containerName string, tail int) (string, error) {
+	path := fmt.Sprintf("/api/docker.getContainerLogs?containerId=%s&tail=%d", containerName, tail)
+	data, status, err := c.do(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return "", err
+	}
+	if status >= 400 {
+		return "", fmt.Errorf("docker.getContainerLogs returned HTTP %d: %s", status, string(data))
+	}
+	// Response may be a plain string or {"logs":"..."}
+	var cl ContainerLogs
+	if json.Unmarshal(data, &cl) == nil && cl.Logs != "" {
+		return cl.Logs, nil
+	}
+	// Fallback: treat body as raw log text
+	return strings.TrimSpace(string(data)), nil
+}
+
+// StreamContainerLogs resolves the running container for applicationID via the
+// Dokploy API, then polls container logs every 2 s and calls onLine for each
+// new line. Blocks until ctx is cancelled.
+func (c *Client) StreamContainerLogs(ctx context.Context, applicationID string, tail int, onLine func(string)) error {
+	app, err := c.GetApplication(ctx, applicationID)
+	if err != nil {
+		return fmt.Errorf("resolve application: %w", err)
+	}
+
+	// Prefer ContainerName if populated; fall back to AppName.
+	containerName := app.ContainerName
+	if containerName == "" {
+		containerName = app.AppName
+	}
+	if containerName == "" {
+		return fmt.Errorf("dokploy: could not resolve container name for application %s", applicationID)
+	}
+
+	onLine(fmt.Sprintf("// resolved container: %s", containerName))
+
+	// Fetch initial batch.
+	prev, err := c.GetContainerLogs(ctx, containerName, tail)
+	if err != nil {
+		onLine(fmt.Sprintf("// log fetch error: %v", err))
+	} else {
+		for _, line := range strings.Split(prev, "\n") {
+			line = strings.TrimRight(line, "\r")
+			if line != "" {
+				onLine(line)
+			}
+		}
+	}
+	seenLen := len(prev)
+
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+		}
+
+		logs, err := c.GetContainerLogs(ctx, containerName, tail)
+		if err != nil {
+			onLine(fmt.Sprintf("// poll error: %v", err))
+			continue
+		}
+		if len(logs) > seenLen {
+			newPart := logs[seenLen:]
+			for _, line := range strings.Split(newPart, "\n") {
+				line = strings.TrimRight(line, "\r")
+				if line != "" {
+					onLine(line)
+				}
+			}
+			seenLen = len(logs)
+		}
+	}
+}
+
 // StreamDeployLogs triggers a deploy then polls the latest deployment's log,
 // calling onLine for each new line. Blocks until the deploy finishes or ctx is done.
 func (c *Client) StreamDeployLogs(ctx context.Context, applicationID string, onLine func(string)) error {

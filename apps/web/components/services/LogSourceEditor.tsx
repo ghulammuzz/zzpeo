@@ -12,6 +12,7 @@ const SOURCE_TYPES: { value: LogSourceType | "none"; label: string; description:
   { value: "file",             label: "File (host)",             description: "tail -f a log file on the server" },
   { value: "docker_exec_file", label: "File inside container",   description: "docker exec + tail -f inside a running container" },
   { value: "journalctl",       label: "Journalctl",              description: "journalctl -u (systemd service)" },
+  { value: "dokploy",          label: "Dokploy",                 description: "resolve container via Dokploy API + poll logs" },
 ]
 
 interface Props {
@@ -132,6 +133,23 @@ export function LogSourceEditor({ value, onChange }: Props) {
             className="font-mono"
           />
           <p className="text-xs text-muted-foreground">Unit name passed to <code className="bg-muted px-1 rounded">journalctl -u</code>.</p>
+        </div>
+      )}
+
+      {/* dokploy */}
+      {currentType === "dokploy" && (
+        <div className="space-y-1.5">
+          <Label>Dokploy Application ID</Label>
+          <Input
+            placeholder="app_xxxxxxxxxx"
+            value={value?.application_id ?? ""}
+            onChange={(e) => setField("application_id", e.target.value)}
+            className="font-mono"
+          />
+          <p className="text-xs text-muted-foreground">
+            Resolves the running container name via Dokploy API, then polls container logs every 2s.
+            Server must be a Dokploy server (auth type: Dokploy API).
+          </p>
         </div>
       )}
     </div>

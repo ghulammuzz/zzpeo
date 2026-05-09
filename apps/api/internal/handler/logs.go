@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/ghulammuzz/zzpeo/api/internal/dokploy"
 	"github.com/ghulammuzz/zzpeo/api/internal/model"
 	"github.com/ghulammuzz/zzpeo/api/internal/repository"
 	"github.com/ghulammuzz/zzpeo/api/internal/service"
@@ -32,11 +33,12 @@ func NewLogsHandler(svcRepo repository.ServiceRepo, serverRepo repository.Server
 
 // LogConfig is stored as JSONB in services.log_config.
 type LogConfig struct {
-	Type          string `json:"type"`           // docker_logs | pm2 | file | docker_exec_file | journalctl
+	Type          string `json:"type"`           // docker_logs | pm2 | file | docker_exec_file | journalctl | dokploy
 	ContainerName string `json:"container_name"` // docker_logs, docker_exec_file
 	AppName       string `json:"app_name"`       // pm2
 	Path          string `json:"path"`           // file, docker_exec_file
 	Unit          string `json:"unit"`           // journalctl
+	ApplicationID string `json:"application_id"` // dokploy
 }
 
 // validSince allows safe duration strings passed to docker --since
@@ -74,9 +76,19 @@ func (h *LogsHandler) StreamServiceLogs(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	logCmd, err := buildLogCmd(svc, tail, since)
-	if err != nil {
-		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{"error": err.Error()})
+	// Resolve Dokploy log type: explicit log_config.type=dokploy OR deploy_type=dokploy fallback.
+	dokployAppID := ""
+	if len(svc.LogConfig) > 0 && string(svc.LogConfig) != "null" {
+		var lcfg LogConfig
+		if json.Unmarshal(svc.LogConfig, &lcfg) == nil && lcfg.Type == "dokploy" {
+			dokployAppID = lcfg.ApplicationID
+		}
+	}
+	if dokployAppID == "" && svc.DeployType == model.DeployDokploy {
+		var dcfg service.DokployDeployConfig
+		if json.Unmarshal(svc.DeployConfig, &dcfg) == nil {
+			dokployAppID = dcfg.ApplicationID
+		}
 	}
 
 	srv, err := h.serverRepo.GetByIDWithCredentials(ctx, svc.ServerID)
@@ -85,6 +97,41 @@ func (h *LogsHandler) StreamServiceLogs(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "server not found"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// ── Dokploy path ──────────────────────────────────────────────────────────
+	if dokployAppID != "" {
+		tokenBytes, err := h.ks.Decrypt(srv.PasswordEnc, srv.ID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "decrypt token failed"})
+		}
+		baseURL := fmt.Sprintf("http://%s:%d", srv.Host, srv.Port)
+		dk := dokploy.NewClient(baseURL, string(tokenBytes))
+		appID := dokployAppID
+
+		c.Set("Content-Type", "text/event-stream")
+		c.Set("Cache-Control", "no-cache")
+		c.Set("Connection", "keep-alive")
+		c.Set("Transfer-Encoding", "chunked")
+		c.Set("X-Accel-Buffering", "no")
+
+		c.Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+			streamErr := dk.StreamContainerLogs(ctx, appID, tail, func(line string) {
+				fmt.Fprintf(w, "event: log\ndata: %s\n\n", line)
+				_ = w.Flush()
+			})
+			if streamErr != nil && ctx.Err() == nil {
+				fmt.Fprintf(w, "event: error\ndata: %s\n\n", streamErr.Error())
+				_ = w.Flush()
+			}
+		}))
+		return nil
+	}
+
+	// ── SSH path ──────────────────────────────────────────────────────────────
+	logCmd, err := buildLogCmd(svc, tail, since)
+	if err != nil {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	c.Set("Content-Type", "text/event-stream")
@@ -217,6 +264,10 @@ func logCmdFromConfig(cfg LogConfig, tail int, since string) (string, error) {
 			return "", fmt.Errorf("log_config.unit is required for journalctl")
 		}
 		return fmt.Sprintf("journalctl -u %s -f --lines=%d --no-pager 2>&1", cfg.Unit, tail), nil
+
+	case "dokploy":
+		// Handled via HTTP API before buildLogCmd is called — should not reach here.
+		return "", fmt.Errorf("dokploy log source requires Dokploy API path")
 
 	default:
 		return "", fmt.Errorf("unknown log source type %q", cfg.Type)

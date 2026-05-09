@@ -45,7 +45,7 @@ export interface Server {
   updated_at: string;
 }
 
-export type LogSourceType = "docker_logs" | "pm2" | "file" | "docker_exec_file" | "journalctl";
+export type LogSourceType = "docker_logs" | "pm2" | "file" | "docker_exec_file" | "journalctl" | "dokploy";
 
 export interface LogConfig {
   type: LogSourceType;
@@ -53,6 +53,7 @@ export interface LogConfig {
   app_name?: string;
   path?: string;
   unit?: string;
+  application_id?: string;
 }
 
 export interface Service {
