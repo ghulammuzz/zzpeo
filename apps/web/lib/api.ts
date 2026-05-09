@@ -217,6 +217,8 @@ export const api = {
       host: string; port: number; user: string; auth_type: string;
       ssh_key?: string; password?: string; passphrase?: string;
     }) => post<{ fingerprint: string; latency_ms: number }>("/servers/test-ssh", body),
+    testDokploy: (body: { host: string; port: number; api_token: string }) =>
+      post<{ ok: boolean; container_count: number; base_url: string }>("/servers/test-dokploy", body),
   },
   services: {
     list: (serverId: string) => get<Service[]>(`/servers/${serverId}/services`),

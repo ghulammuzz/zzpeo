@@ -71,6 +71,7 @@ func registerRoutes(app *fiber.App, pool *pgxpool.Pool, ks *appssh.KeyStore, use
 	protected.Delete("/environments/:envId/servers/:serverId", middleware.RequireAdmin, sh.Delete)
 	protected.Post("/environments/:envId/servers/:serverId/test-connection", middleware.RequireAdmin, sh.TestConnection)
 	protected.Post("/servers/test-ssh", middleware.RequireAdmin, sh.TestRawSSH)
+	protected.Post("/servers/test-dokploy", middleware.RequireAdmin, sh.TestDokploy)
 
 	// ── Services ──────────────────────────────────────────────────
 	svcH := handler.NewServiceHandler(serviceRepo, ks)

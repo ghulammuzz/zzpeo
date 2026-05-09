@@ -66,6 +66,26 @@ func (c *Client) do(ctx context.Context, method, path string, body any) ([]byte,
 	return data, resp.StatusCode, nil
 }
 
+// TestConnection verifies the base URL is reachable and the API token is valid
+// by calling docker.getContainers and returning the container count.
+func (c *Client) TestConnection(ctx context.Context) (containerCount int, err error) {
+	data, status, err := c.do(ctx, http.MethodGet, "/api/docker.getContainers", nil)
+	if err != nil {
+		return 0, fmt.Errorf("connection failed: %w", err)
+	}
+	if status == 401 {
+		return 0, fmt.Errorf("invalid API token (HTTP 401)")
+	}
+	if status >= 400 {
+		return 0, fmt.Errorf("Dokploy returned HTTP %d: %s", status, string(data))
+	}
+	var containers []Container
+	if err := json.Unmarshal(data, &containers); err != nil {
+		return 0, fmt.Errorf("unexpected response (not a Dokploy instance?): %w", err)
+	}
+	return len(containers), nil
+}
+
 // TriggerDeploy triggers a new deployment for the given application.
 func (c *Client) TriggerDeploy(ctx context.Context, applicationID string) error {
 	_, status, err := c.do(ctx, http.MethodPost, "/api/application.deploy", map[string]string{

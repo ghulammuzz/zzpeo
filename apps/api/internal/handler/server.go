@@ -1,8 +1,11 @@
 package handler
 
 import (
+	"context"
 	"errors"
+	"fmt"
 
+	"github.com/ghulammuzz/zzpeo/api/internal/dokploy"
 	"github.com/ghulammuzz/zzpeo/api/internal/model"
 	"github.com/ghulammuzz/zzpeo/api/internal/repository"
 	appssh "github.com/ghulammuzz/zzpeo/api/internal/ssh"
@@ -344,6 +347,40 @@ func (h *ServerHandler) TestConnection(c *fiber.Ctx) error {
 		"fingerprint": fp,
 		"latency_ms":  latency.Milliseconds(),
 		"confirmed":   req.Confirm,
+	})
+}
+
+type testDokployRequest struct {
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	APIToken string `json:"api_token"`
+}
+
+// TestDokploy handles POST /servers/test-dokploy
+// Verifies Dokploy base URL + API token without creating a server record.
+func (h *ServerHandler) TestDokploy(c *fiber.Ctx) error {
+	var req testDokployRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+	if req.Host == "" || req.APIToken == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "host and api_token are required"})
+	}
+	if req.Port == 0 {
+		req.Port = 3000
+	}
+
+	baseURL := fmt.Sprintf("http://%s:%d", req.Host, req.Port)
+	dk := dokploy.NewClient(baseURL, req.APIToken)
+
+	count, err := dk.TestConnection(context.Background())
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{
+		"ok":              true,
+		"container_count": count,
+		"base_url":        baseURL,
 	})
 }
 

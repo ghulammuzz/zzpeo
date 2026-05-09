@@ -65,6 +65,28 @@ export function ServerForm({
     setForm((f) => ({ ...f, [key]: value }));
   };
 
+  const [testingDokploy, setTestingDokploy] = useState(false);
+  const [dokployTestResult, setDokployTestResult] = useState<{
+    ok: boolean; container_count?: number; base_url?: string; error?: string;
+  } | null>(null);
+
+  const handleTestDokploy = async () => {
+    setTestingDokploy(true);
+    setDokployTestResult(null);
+    try {
+      const result = await api.servers.testDokploy({
+        host: form.host,
+        port: parseInt(form.port) || 3000,
+        api_token: form.password,
+      });
+      setDokployTestResult({ ...result, ok: true });
+    } catch (err) {
+      setDokployTestResult({ ok: false, error: err instanceof Error ? err.message : "Connection failed" });
+    } finally {
+      setTestingDokploy(false);
+    }
+  };
+
   const handleTestRaw = async () => {
     setTestingRaw(true);
     setRawTestResult(null);
@@ -310,6 +332,42 @@ export function ServerForm({
                 Settings → Profile → API/CLI section in your Dokploy instance.
               </p>
             </div>
+
+            {/* Dokploy connection test */}
+            <div className="space-y-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={testingDokploy || !form.host || !form.password}
+                onClick={handleTestDokploy}
+                className="w-full border-neon-cyan/40 text-neon-cyan/80 hover:bg-neon-cyan/8"
+              >
+                <Zap className={`h-3.5 w-3.5 mr-2 ${testingDokploy ? "animate-pulse" : ""}`} />
+                {testingDokploy ? "Testing Dokploy API..." : "Test Dokploy Connection"}
+              </Button>
+              {dokployTestResult && (
+                <div className={`rounded-sm border px-3 py-2.5 text-xs font-mono ${
+                  dokployTestResult.ok
+                    ? "border-neon-green/30 bg-neon-green/5 text-neon-green/80"
+                    : "border-neon-magenta/30 bg-neon-magenta/5 text-neon-magenta/80"
+                }`}>
+                  {dokployTestResult.ok ? (
+                    <>
+                      <p className="font-semibold mb-1">// ✓ Dokploy API reachable</p>
+                      <p>url: {dokployTestResult.base_url}</p>
+                      <p>containers: {dokployTestResult.container_count} running</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-semibold mb-1">// ✗ Connection failed</p>
+                      <p className="break-all">{dokployTestResult.error}</p>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="dokploy_ssh_key">
                 SSH Private Key <span className="text-muted-foreground font-normal">(optional — required for Docker Swarm log streaming)</span>
