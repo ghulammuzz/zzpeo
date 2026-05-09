@@ -19,13 +19,14 @@ import { Rocket, Package, Pencil, Trash2, X, Plus, KeyRound, ScrollText, ArrowUp
 import { ServiceLogs } from "@/components/services/ServiceLogs"
 import { EnvVarsEditor } from "@/components/shared/EnvVarsEditor"
 import type { DeployType, ObjectItem, Service, LogConfig, EnvVarSet, LinkedEnvVarSet } from "@/lib/types"
-import type { PHPDeployConfig, PM2DeployConfig, ShellDeployConfig, DockerDeployConfig } from "@/lib/types"
+import type { PHPDeployConfig, PM2DeployConfig, ShellDeployConfig, DockerDeployConfig, DokployDeployConfig } from "@/lib/types"
 
 const DEPLOY_STYLE: Record<string, { bg: string; text: string }> = {
-  php:    { bg: "rgba(77,159,255,0.12)",  text: "#4d9fff" },
-  pm2:    { bg: "rgba(61,255,110,0.12)",  text: "#3dff6e" },
-  shell:  { bg: "rgba(255,230,0,0.12)",   text: "#ffe600" },
-  docker: { bg: "rgba(255,0,85,0.12)",    text: "#ff4499" },
+  php:     { bg: "rgba(77,159,255,0.12)",  text: "#4d9fff" },
+  pm2:     { bg: "rgba(61,255,110,0.12)",  text: "#3dff6e" },
+  shell:   { bg: "rgba(255,230,0,0.12)",   text: "#ffe600" },
+  docker:  { bg: "rgba(255,0,85,0.12)",    text: "#ff4499" },
+  dokploy: { bg: "rgba(0,229,255,0.12)",   text: "#00e5ff" },
 }
 
 interface PageProps {
@@ -741,6 +742,21 @@ function ConfigView({ type, config }: { type: DeployType; config: unknown }) {
             )}
           </>
         )}
+      </dl>
+    )
+  }
+
+  if (type === "dokploy") {
+    const cfg = config as DokployDeployConfig
+    return (
+      <dl className="space-y-2 text-sm">
+        <div>
+          <dt className="text-muted-foreground text-xs font-medium uppercase">Application ID</dt>
+          <dd className="font-mono mt-0.5 text-neon-cyan/80">{cfg.application_id || "—"}</dd>
+        </div>
+        <p className="text-xs text-muted-foreground/60 font-mono">
+          // Deploys via Dokploy REST API · URL + token from server config
+        </p>
       </dl>
     )
   }

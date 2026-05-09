@@ -1,4 +1,4 @@
-export type DeployType = "php" | "pm2" | "shell" | "docker";
+export type DeployType = "php" | "pm2" | "shell" | "docker" | "dokploy";
 export type DeployStatus = "pending" | "running" | "success" | "failed" | "cancelled";
 export type EnvVarDeployMode = "all" | "build_arg" | "runtime" | "both";
 export type EnvironmentType = "prod" | "stg" | "custom";
@@ -69,7 +69,8 @@ export interface Service {
     | PHPDeployConfig
     | PM2DeployConfig
     | ShellDeployConfig
-    | DockerDeployConfig;
+    | DockerDeployConfig
+    | DokployDeployConfig;
   created_at: string;
   updated_at: string;
 }
@@ -101,6 +102,10 @@ export interface DockerDeployConfig {
   run_args: string[];
   compose_file: string;
   dockerfile?: string;
+}
+
+export interface DokployDeployConfig {
+  application_id: string;
 }
 
 export interface ServiceEnvVar {

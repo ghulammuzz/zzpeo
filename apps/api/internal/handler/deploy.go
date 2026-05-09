@@ -3,12 +3,14 @@ package handler
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/ghulammuzz/zzpeo/api/internal/dokploy"
 	"github.com/ghulammuzz/zzpeo/api/internal/model"
 	"github.com/ghulammuzz/zzpeo/api/internal/repository"
 	"github.com/ghulammuzz/zzpeo/api/internal/service"
@@ -192,9 +194,25 @@ func (h *DeployHandler) TriggerDeploy(c *fiber.Ctx) error {
 		}
 	}
 
-	plan, err := service.BuildDeployPlan(svc, resolvedVars)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("build deploy plan: %v", err)})
+	// For Dokploy services, skip SSH plan-building entirely.
+	var dokployConfig *service.DokployDeployConfig
+	var plan *service.DeployPlan
+
+	if svc.DeployType == model.DeployDokploy {
+		var cfg service.DokployDeployConfig
+		if err := json.Unmarshal(svc.DeployConfig, &cfg); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid dokploy deploy_config"})
+		}
+		if cfg.ApplicationID == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "dokploy application_id is required"})
+		}
+		dokployConfig = &cfg
+	} else {
+		var buildErr error
+		plan, buildErr = service.BuildDeployPlan(svc, resolvedVars)
+		if buildErr != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("build deploy plan: %v", buildErr)})
+		}
 	}
 
 	if _, loaded := activeServices.LoadOrStore(serviceID.String(), "pending"); loaded {
@@ -226,62 +244,79 @@ func (h *DeployHandler) TriggerDeploy(c *fiber.Ctx) error {
 
 		_, _ = h.deployRepo.UpdateStatus(bgCtx, dep.ID, model.StatusRunning, nil, nil, nil)
 
-		client, err := appssh.NewClientFromServer(srv, h.ks)
-		if err != nil {
-			msg := fmt.Sprintf("SSH connect failed: %v", err)
-			bc.send(logEvent{"log", msg})
-			finished := time.Now()
-			_, _ = h.deployRepo.UpdateStatus(bgCtx, dep.ID, model.StatusFailed, &msg, nil, &finished)
-			return
-		}
-		defer client.Close()
-
-		runAsUser := ""
-		if svc.RunAsUser != nil {
-			runAsUser = *svc.RunAsUser
-		}
-		executor := appssh.NewExecutor(client)
-
-		// runPhase executes commands, broadcasts output, and accumulates lines into logBuf.
-		runPhase := func(eventType string, cmds []string, logBuf *strings.Builder) error {
-			if len(cmds) == 0 {
-				return nil
-			}
-			ch := make(chan string, 256)
-			done := make(chan struct{})
-			go func() {
-				defer close(done)
-				for line := range ch {
-					bc.send(logEvent{eventType, line})
-					logBuf.WriteString(line + "\n")
-				}
-			}()
-			runErr := executor.RunCommands(bgCtx, svc.Workdir, runAsUser, cmds, ch)
-			close(ch)
-			<-done
-			return runErr
-		}
-
 		var buildLogBuf strings.Builder
 		var containerLogBuf strings.Builder
+		var finalErr error
 
-		// Phase 1: main deploy steps (build, stop, rm, run, sleep).
-		stepsErr := runPhase("log", plan.Steps, &buildLogBuf)
+		if dokployConfig != nil {
+			// ── Dokploy API path ─────────────────────────────────────────────
+			tokenBytes, err := h.ks.Decrypt(srv.PasswordEnc, srv.ID)
+			if err != nil {
+				msg := fmt.Sprintf("decrypt Dokploy token failed: %v", err)
+				bc.send(logEvent{"log", msg})
+				finished := time.Now()
+				_, _ = h.deployRepo.UpdateStatus(bgCtx, dep.ID, model.StatusFailed, &msg, nil, &finished)
+				return
+			}
+			baseURL := fmt.Sprintf("http://%s:%d", srv.Host, srv.Port)
+			dk := dokploy.NewClient(baseURL, string(tokenBytes))
 
-		// Phase 2: container logs — always attempt so user sees crash reason.
-		if plan.ContainerLogsCmd != "" {
-			_ = runPhase("container_log", []string{plan.ContainerLogsCmd}, &containerLogBuf)
-		}
+			finalErr = dk.StreamDeployLogs(bgCtx, dokployConfig.ApplicationID, func(line string) {
+				bc.send(logEvent{"log", line})
+				buildLogBuf.WriteString(line + "\n")
+			})
+		} else {
+			// ── SSH path ─────────────────────────────────────────────────────
+			client, err := appssh.NewClientFromServer(srv, h.ks)
+			if err != nil {
+				msg := fmt.Sprintf("SSH connect failed: %v", err)
+				bc.send(logEvent{"log", msg})
+				finished := time.Now()
+				_, _ = h.deployRepo.UpdateStatus(bgCtx, dep.ID, model.StatusFailed, &msg, nil, &finished)
+				return
+			}
+			defer client.Close()
 
-		// Phase 3: health check — only run if steps succeeded.
-		var checkErr error
-		if stepsErr == nil && plan.CheckCmd != "" {
-			checkErr = runPhase("log", []string{plan.CheckCmd}, &buildLogBuf)
-		}
+			runAsUser := ""
+			if svc.RunAsUser != nil {
+				runAsUser = *svc.RunAsUser
+			}
+			executor := appssh.NewExecutor(client)
 
-		finalErr := stepsErr
-		if finalErr == nil {
-			finalErr = checkErr
+			runPhase := func(eventType string, cmds []string, logBuf *strings.Builder) error {
+				if len(cmds) == 0 {
+					return nil
+				}
+				ch := make(chan string, 256)
+				done := make(chan struct{})
+				go func() {
+					defer close(done)
+					for line := range ch {
+						bc.send(logEvent{eventType, line})
+						logBuf.WriteString(line + "\n")
+					}
+				}()
+				runErr := executor.RunCommands(bgCtx, svc.Workdir, runAsUser, cmds, ch)
+				close(ch)
+				<-done
+				return runErr
+			}
+
+			stepsErr := runPhase("log", plan.Steps, &buildLogBuf)
+
+			if plan.ContainerLogsCmd != "" {
+				_ = runPhase("container_log", []string{plan.ContainerLogsCmd}, &containerLogBuf)
+			}
+
+			var checkErr error
+			if stepsErr == nil && plan.CheckCmd != "" {
+				checkErr = runPhase("log", []string{plan.CheckCmd}, &buildLogBuf)
+			}
+
+			finalErr = stepsErr
+			if finalErr == nil {
+				finalErr = checkErr
+			}
 		}
 
 		buildLog := buildLogBuf.String()
@@ -290,7 +325,6 @@ func (h *DeployHandler) TriggerDeploy(c *fiber.Ctx) error {
 		status := model.StatusSuccess
 
 		if bgCtx.Err() != nil {
-			// Context cancelled — deployment was explicitly cancelled.
 			status = model.StatusCancelled
 			buildLog += "\nDeploy cancelled."
 		} else if finalErr != nil {

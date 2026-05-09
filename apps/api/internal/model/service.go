@@ -11,10 +11,11 @@ import (
 type DeployType string
 
 const (
-	DeployPHP    DeployType = "php"
-	DeployPM2    DeployType = "pm2"
-	DeployShell  DeployType = "shell"
-	DeployDocker DeployType = "docker"
+	DeployPHP     DeployType = "php"
+	DeployPM2     DeployType = "pm2"
+	DeployShell   DeployType = "shell"
+	DeployDocker  DeployType = "docker"
+	DeployDokploy DeployType = "dokploy"
 )
 
 // ServiceEnvVar is an env var scoped to a Service.

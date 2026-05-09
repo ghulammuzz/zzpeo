@@ -13,6 +13,7 @@ import type {
   PM2DeployConfig,
   ShellDeployConfig,
   DockerDeployConfig,
+  DokployDeployConfig,
 } from "@/lib/types"
 
 interface DeploymentTypeSelectorProps {
@@ -107,6 +108,11 @@ export function DeploymentTypeSelector({ value, onChange }: DeploymentTypeSelect
     ...(value.type === "docker" ? (value.config as DockerDeployConfig) : {}),
   })
 
+  const [dokployConfig, setDokployConfig] = useState<DokployDeployConfig>({
+    application_id: "",
+    ...(value.type === "dokploy" ? (value.config as DokployDeployConfig) : {}),
+  })
+
   const [dockerMode, setDockerMode] = useState<"direct" | "compose">(
     (value.config as DockerDeployConfig)?.compose_file ? "compose" : "direct"
   )
@@ -114,13 +120,11 @@ export function DeploymentTypeSelector({ value, onChange }: DeploymentTypeSelect
   const handleTabChange = (tab: string) => {
     const t = tab as DeployType
     const config =
-      t === "php"
-        ? phpConfig
-        : t === "pm2"
-        ? pm2Config
-        : t === "shell"
-        ? shellConfig
-        : dockerConfig
+      t === "php"     ? phpConfig
+      : t === "pm2"   ? pm2Config
+      : t === "shell" ? shellConfig
+      : t === "dokploy" ? dokployConfig
+      : dockerConfig
     onChange(t, config)
   }
 
@@ -148,13 +152,20 @@ export function DeploymentTypeSelector({ value, onChange }: DeploymentTypeSelect
     if (value.type === "docker") onChange("docker", cfg)
   }
 
+  const updateDokploy = (updates: Partial<DokployDeployConfig>) => {
+    const cfg = { ...dokployConfig, ...updates }
+    setDokployConfig(cfg)
+    if (value.type === "dokploy") onChange("dokploy", cfg)
+  }
+
   return (
     <Tabs defaultValue={value.type} onValueChange={handleTabChange}>
-      <TabsList className="grid w-full grid-cols-4">
+      <TabsList className="grid w-full grid-cols-5">
         <TabsTrigger value="php">PHP</TabsTrigger>
         <TabsTrigger value="pm2">PM2</TabsTrigger>
         <TabsTrigger value="shell">Shell</TabsTrigger>
         <TabsTrigger value="docker">Docker</TabsTrigger>
+        <TabsTrigger value="dokploy">Dokploy</TabsTrigger>
       </TabsList>
 
       {/* PHP */}
@@ -364,6 +375,26 @@ export function DeploymentTypeSelector({ value, onChange }: DeploymentTypeSelect
             />
           </>
         )}
+      </TabsContent>
+
+      {/* Dokploy */}
+      <TabsContent value="dokploy" className="space-y-4 pt-4">
+        <div className="rounded-sm border border-neon-cyan/20 bg-neon-cyan/5 px-3 py-2.5 text-xs font-mono text-neon-cyan/70">
+          // Deploys via Dokploy REST API. Server host/port = Dokploy instance URL.
+          Server password field = Dokploy API token (encrypted at rest).
+        </div>
+        <div className="space-y-2">
+          <Label>Dokploy Application ID</Label>
+          <Input
+            value={dokployConfig.application_id}
+            onChange={(e) => updateDokploy({ application_id: e.target.value })}
+            placeholder="app_xxxxxxxxxx"
+            className="font-mono"
+          />
+          <p className="text-xs text-muted-foreground">
+            Found in Dokploy dashboard → Application → Settings → Application ID.
+          </p>
+        </div>
       </TabsContent>
     </Tabs>
   )

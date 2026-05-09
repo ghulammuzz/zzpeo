@@ -37,6 +37,12 @@ type DockerDeployConfig struct {
 	Dockerfile    string   `json:"dockerfile"`
 }
 
+// DokployDeployConfig deploys via the Dokploy REST API.
+// The Dokploy base URL and API token come from the linked server record.
+type DokployDeployConfig struct {
+	ApplicationID string `json:"application_id"`
+}
+
 // DeployPlan holds the ordered commands for a deployment, split into three
 // logical phases so the handler can stream them to separate log channels.
 //
@@ -153,6 +159,12 @@ func BuildDeployPlan(svc *model.Service, envVars []ResolvedEnvVar) (*DeployPlan,
 				cfg.ContainerName,
 			),
 		}, nil
+
+	case model.DeployDokploy:
+		// Dokploy deploys via HTTP API — no SSH commands. The handler branches
+		// before calling BuildDeployPlan for this type. This case exists so that
+		// the switch is exhaustive and the type is always recognized.
+		return nil, fmt.Errorf("dokploy: use the Dokploy API path, not SSH commands")
 	}
 
 	return nil, fmt.Errorf("unknown deploy_type: %s", svc.DeployType)

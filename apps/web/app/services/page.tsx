@@ -8,10 +8,11 @@ import { Terminal, ArrowRight } from "lucide-react"
 import type { GlobalService } from "@/lib/types"
 
 const DEPLOY_STYLE: Record<string, { bg: string; text: string }> = {
-  php:    { bg: "rgba(77,159,255,0.12)",  text: "#4d9fff" },
-  pm2:    { bg: "rgba(61,255,110,0.12)",  text: "#3dff6e" },
-  shell:  { bg: "rgba(255,230,0,0.12)",   text: "#ffe600" },
-  docker: { bg: "rgba(255,0,85,0.12)",    text: "#ff4499" },
+  php:     { bg: "rgba(77,159,255,0.12)",  text: "#4d9fff" },
+  pm2:     { bg: "rgba(61,255,110,0.12)",  text: "#3dff6e" },
+  shell:   { bg: "rgba(255,230,0,0.12)",   text: "#ffe600" },
+  docker:  { bg: "rgba(255,0,85,0.12)",    text: "#ff4499" },
+  dokploy: { bg: "rgba(0,229,255,0.12)",   text: "#00e5ff" },
 }
 
 export default function ServicesPage() {

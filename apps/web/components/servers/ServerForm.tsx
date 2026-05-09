@@ -37,7 +37,7 @@ export function ServerForm({
     host: "",
     port: "22",
     user: "",
-    auth_type: "key" as "key" | "password",
+    auth_type: "key" as "key" | "password" | "dokploy",
     ssh_key: "",
     passphrase: "",
     password: "",
@@ -121,16 +121,24 @@ export function ServerForm({
         name: form.name,
         host: form.host,
         port: parseInt(form.port),
-        user: form.user,
+        user: form.auth_type === "dokploy" ? "dokploy" : form.user,
         auth_type: form.auth_type,
         ssh_key: form.auth_type === "key" ? form.ssh_key : undefined,
         passphrase:
           form.auth_type === "key" && form.passphrase
             ? form.passphrase
             : undefined,
-        password: form.auth_type === "password" ? form.password : undefined,
+        password: (form.auth_type === "password" || form.auth_type === "dokploy")
+          ? form.password
+          : undefined,
       });
       setCreatedServerId(server.id);
+      // Dokploy servers skip SSH fingerprint test — just redirect.
+      if (form.auth_type === "dokploy") {
+        toast({ title: "Dokploy server saved", description: "API token stored encrypted." });
+        router.push(`${redirectBasePath}/servers/${server.id}`);
+        return;
+      }
       await handleTestConnection(server.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create server");
@@ -201,24 +209,26 @@ export function ServerForm({
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="user">SSH User</Label>
-          <Input
-            id="user"
-            placeholder="ubuntu"
-            value={form.user}
-            onChange={(e) => setField("user", e.target.value)}
-            required
-            className="font-mono"
-          />
-        </div>
+        {form.auth_type !== "dokploy" && (
+          <div className="space-y-2">
+            <Label htmlFor="user">SSH User</Label>
+            <Input
+              id="user"
+              placeholder="ubuntu"
+              value={form.user}
+              onChange={(e) => setField("user", e.target.value)}
+              required
+              className="font-mono"
+            />
+          </div>
+        )}
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <Label>Auth Type</Label>
-          <div className="flex items-center gap-2 rounded-md border p-2">
+          <div className="flex items-center gap-2 rounded-md border p-2 flex-wrap">
             <button
               type="button"
-              onClick={() => setField("auth_type", "key")}
+              onClick={() => { setField("auth_type", "key"); setField("port", "22"); }}
               className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
                 form.auth_type === "key"
                   ? "bg-primary text-primary-foreground"
@@ -229,7 +239,7 @@ export function ServerForm({
             </button>
             <button
               type="button"
-              onClick={() => setField("auth_type", "password")}
+              onClick={() => { setField("auth_type", "password"); setField("port", "22"); }}
               className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
                 form.auth_type === "password"
                   ? "bg-primary text-primary-foreground"
@@ -238,10 +248,44 @@ export function ServerForm({
             >
               Password
             </button>
+            <button
+              type="button"
+              onClick={() => { setField("auth_type", "dokploy"); setField("port", "3000"); }}
+              className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+                form.auth_type === "dokploy"
+                  ? "bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/40"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Dokploy API
+            </button>
           </div>
         </div>
 
-        {form.auth_type === "key" ? (
+        {form.auth_type === "dokploy" && (
+          <div className="space-y-3 rounded-sm border border-neon-cyan/20 bg-neon-cyan/5 p-3">
+            <p className="text-xs font-mono text-neon-cyan/70">
+              // Host = Dokploy instance URL · Port = 3000 (default) · API token stored encrypted
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="api_token">Dokploy API Token</Label>
+              <Input
+                id="api_token"
+                type="password"
+                placeholder="••••••••••••••••"
+                value={form.password}
+                onChange={(e) => setField("password", e.target.value)}
+                required
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground">
+                Settings → Profile → API/CLI section in your Dokploy instance.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {form.auth_type !== "dokploy" && form.auth_type === "key" ? (
           <div className="space-y-2">
             <Label htmlFor="private_key">PEM Private Key</Label>
             <Textarea
@@ -294,7 +338,7 @@ export function ServerForm({
               </div>
             )}
           </div>
-        ) : (
+        ) : form.auth_type === "password" ? (
           <div className="space-y-2">
             <Label htmlFor="password">SSH Password</Label>
             <Input
@@ -306,7 +350,7 @@ export function ServerForm({
               required
             />
           </div>
-        )}
+        ) : null}
 
         {error && (
           <div className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
@@ -317,7 +361,11 @@ export function ServerForm({
         <div className="flex gap-3 pt-2">
           <Button type="submit" disabled={loading || testing}>
             <Zap className="h-4 w-4 mr-2" />
-            {loading || testing ? "Connecting..." : "Create & Test Connection"}
+            {loading || testing
+              ? "Saving..."
+              : form.auth_type === "dokploy"
+                ? "Save Dokploy Server"
+                : "Create & Test Connection"}
           </Button>
           <Button
             type="button"
