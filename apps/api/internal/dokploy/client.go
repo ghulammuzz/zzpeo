@@ -121,6 +121,51 @@ func (c *Client) ListDeployments(ctx context.Context, applicationID string) ([]D
 type Application struct {
 	AppName       string `json:"appName"`
 	ContainerName string `json:"containerName"`
+
+	// Git source — populated depending on which provider is used.
+	SourceType string `json:"sourceType"` // "git" | "docker" | etc.
+
+	// Custom/SSH git
+	CustomGitURL    string `json:"customGitUrl"`
+	CustomGitBranch string `json:"customGitBranch"`
+
+	// GitHub
+	Repository string `json:"repository"`
+	Owner      string `json:"owner"`
+	Branch     string `json:"branch"`
+
+	// GitLab
+	GitlabBranch string `json:"gitlabBranch"`
+
+	// Gitea
+	GiteaBranch string `json:"giteaBranch"`
+
+	// Bitbucket
+	BitbucketBranch     string `json:"bitbucketBranch"`
+	BitbucketRepository string `json:"bitbucketRepository"`
+}
+
+// GitInfo returns resolved branch name and git remote URL for an application.
+func (a *Application) GitInfo() (branch, remote string) {
+	// Priority: customGit > github > gitlab > gitea > bitbucket
+	switch {
+	case a.CustomGitBranch != "":
+		branch = a.CustomGitBranch
+		remote = a.CustomGitURL
+	case a.Branch != "":
+		branch = a.Branch
+		if a.Owner != "" && a.Repository != "" {
+			remote = "github.com/" + a.Owner + "/" + a.Repository
+		}
+	case a.GitlabBranch != "":
+		branch = a.GitlabBranch
+	case a.GiteaBranch != "":
+		branch = a.GiteaBranch
+	case a.BitbucketBranch != "":
+		branch = a.BitbucketBranch
+		remote = a.BitbucketRepository
+	}
+	return
 }
 
 // GetApplication returns basic info for an application by ID.

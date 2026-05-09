@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -81,6 +81,13 @@ export default function ServiceNewPage({ params }: PageProps) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [isDokploy, setIsDokploy] = useState(false)
+  useEffect(() => {
+    api.servers.get(params.envId, params.serverId)
+      .then((srv) => { if ((srv as { auth_type: string }).auth_type === "dokploy") setIsDokploy(true) })
+      .catch(() => {})
+  }, [params.envId, params.serverId])
 
   // Env vars
   const [envVarRows, setEnvVarRows] = useState<EnvVarRow[]>([]);
@@ -212,20 +219,22 @@ export default function ServiceNewPage({ params }: PageProps) {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="workdir">Working Directory</Label>
-              <Input
-                id="workdir"
-                placeholder="/var/www/app"
-                value={workdir}
-                onChange={(e) => setWorkdir(e.target.value)}
-                required
-                className="font-mono"
-              />
-              <p className="text-xs text-muted-foreground">
-                Absolute path on the server where the service lives.
-              </p>
-            </div>
+            {!isDokploy && (
+              <div className="space-y-2">
+                <Label htmlFor="workdir">Working Directory</Label>
+                <Input
+                  id="workdir"
+                  placeholder="/var/www/app"
+                  value={workdir}
+                  onChange={(e) => setWorkdir(e.target.value)}
+                  required
+                  className="font-mono"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Absolute path on the server where the service lives.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="run_as_user">
@@ -245,23 +254,25 @@ export default function ServiceNewPage({ params }: PageProps) {
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="local_port">
-                Local Port{" "}
-                <span className="text-muted-foreground font-normal">(optional)</span>
-              </Label>
-              <Input
-                id="local_port"
-                placeholder="3000"
-                type="number"
-                value={localPort}
-                onChange={(e) => setLocalPort(e.target.value)}
-                className="font-mono w-32"
-              />
-              <p className="text-xs text-muted-foreground">
-                Port this service listens on locally. Used to link nginx proxy_pass to this service in the traffic flow diagram.
-              </p>
-            </div>
+            {!isDokploy && (
+              <div className="space-y-2">
+                <Label htmlFor="local_port">
+                  Local Port{" "}
+                  <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Input
+                  id="local_port"
+                  placeholder="3000"
+                  type="number"
+                  value={localPort}
+                  onChange={(e) => setLocalPort(e.target.value)}
+                  className="font-mono w-32"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Port this service listens on locally. Used to link nginx proxy_pass to this service in the traffic flow diagram.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="domain">

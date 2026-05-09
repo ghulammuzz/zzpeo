@@ -189,8 +189,8 @@ export default function ServerDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Traffic flow visualization */}
-      {services.length > 0 && (
+      {/* Traffic flow visualization — hidden for Dokploy servers */}
+      {services.length > 0 && server.auth_type !== "dokploy" && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">

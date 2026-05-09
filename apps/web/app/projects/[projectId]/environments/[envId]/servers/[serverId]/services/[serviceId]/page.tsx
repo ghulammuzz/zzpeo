@@ -36,6 +36,7 @@ interface PageProps {
 export default function ServiceDetailPage({ params }: PageProps) {
   const router = useRouter()
   const [service, setService] = useState<Service | null>(null)
+  const [serverAuthType, setServerAuthType] = useState<string>("")
   const [connectedObjects, setConnectedObjects] = useState<ObjectItem[]>([])
   const [availableObjects, setAvailableObjects] = useState<ObjectItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -68,7 +69,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
   const [linkingSet, setLinkingSet] = useState(false)
 
   // Git info
-  const [gitInfo, setGitInfo] = useState<{ branch: string; commit_hash: string; commit_message: string } | null>(null)
+  const [gitInfo, setGitInfo] = useState<{ branch: string; commit_hash: string; commit_message: string; git_remote?: string } | null>(null)
   const [gitPulling, setGitPulling] = useState(false)
   const [gitPullOutput, setGitPullOutput] = useState<{ success: boolean; output: string } | null>(null)
 
@@ -77,14 +78,16 @@ export default function ServiceDetailPage({ params }: PageProps) {
 
   const load = async () => {
     try {
-      const [svc, linked, all, lSets, aSets] = await Promise.all([
+      const [svc, linked, all, lSets, aSets, srv] = await Promise.all([
         api.services.get(params.serverId, params.serviceId),
         api.services.listObjects(params.serviceId).catch(() => []),
         api.objects.list(params.envId).catch(() => []),
         api.envVarSets.listLinkedSets(params.serviceId).catch(() => []),
         api.envVarSets.list().catch(() => []),
+        api.servers.get(params.envId, params.serverId).catch(() => null),
       ])
       setService(svc)
+      if (srv) setServerAuthType((srv as { auth_type: string }).auth_type ?? "")
       setConnectedObjects(linked)
       setAvailableObjects(all)
       setLinkedSets(lSets as LinkedEnvVarSet[])
@@ -261,6 +264,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
 
   const linkedIds = new Set(connectedObjects.map((o) => o.id))
   const unlinkable = availableObjects.filter((o) => !linkedIds.has(o.id))
+  const isDokploy = serverAuthType === "dokploy" || service.deploy_type === "dokploy"
 
   if (editing) {
     return (
@@ -281,10 +285,12 @@ export default function ServiceDetailPage({ params }: PageProps) {
               <Label>Service Name</Label>
               <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="frontend-app" />
             </div>
-            <div className="space-y-2">
-              <Label>Working Directory</Label>
-              <Input value={editWorkdir} onChange={(e) => setEditWorkdir(e.target.value)} placeholder="/var/www/app" className="font-mono" />
-            </div>
+            {!isDokploy && (
+              <div className="space-y-2">
+                <Label>Working Directory</Label>
+                <Input value={editWorkdir} onChange={(e) => setEditWorkdir(e.target.value)} placeholder="/var/www/app" className="font-mono" />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>
                 Run As User{" "}
@@ -292,14 +298,16 @@ export default function ServiceDetailPage({ params }: PageProps) {
               </Label>
               <Input value={editRunAsUser} onChange={(e) => setEditRunAsUser(e.target.value)} placeholder="shortie" className="font-mono" />
             </div>
-            <div className="space-y-2">
-              <Label>
-                Local Port{" "}
-                <span className="text-muted-foreground font-normal">(optional)</span>
-              </Label>
-              <Input value={editLocalPort} onChange={(e) => setEditLocalPort(e.target.value)} placeholder="3000" type="number" className="font-mono w-32" />
-              <p className="text-xs text-muted-foreground">Port this service listens on locally — used to link nginx proxy_pass in the traffic flow diagram.</p>
-            </div>
+            {!isDokploy && (
+              <div className="space-y-2">
+                <Label>
+                  Local Port{" "}
+                  <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Input value={editLocalPort} onChange={(e) => setEditLocalPort(e.target.value)} placeholder="3000" type="number" className="font-mono w-32" />
+                <p className="text-xs text-muted-foreground">Port this service listens on locally — used to link nginx proxy_pass in the traffic flow diagram.</p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>
                 Domain{" "}
@@ -365,40 +373,45 @@ export default function ServiceDetailPage({ params }: PageProps) {
             </span>
           </div>
 
-          {/* Row 2: workdir + port + domain + run_as_user chips */}
-          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-            <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-muted-foreground/70 break-all">
-              {service.workdir}
-            </span>
-            {service.local_port && (
-              <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-neon-cyan/60">
-                :{service.local_port}
+          {/* Row 2: workdir + port + domain + run_as_user chips — hidden for Dokploy */}
+          {!isDokploy && (
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-muted-foreground/70 break-all">
+                {service.workdir}
               </span>
-            )}
-            {service.domain && (
-              <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-neon-blue/70 break-all">
-                {service.domain}
-              </span>
-            )}
-            {service.run_as_user && (
-              <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-muted-foreground/60">
-                su: {service.run_as_user}
-              </span>
-            )}
-          </div>
+              {service.local_port && (
+                <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-neon-cyan/60">
+                  :{service.local_port}
+                </span>
+              )}
+              {service.domain && (
+                <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-neon-blue/70 break-all">
+                  {service.domain}
+                </span>
+              )}
+              {service.run_as_user && (
+                <span className="font-mono text-xs bg-secondary/60 border border-border px-2 py-0.5 rounded-sm text-muted-foreground/60">
+                  su: {service.run_as_user}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Row 3: git info */}
-          {gitInfo && (
+          {gitInfo && gitInfo.branch && (
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               <GitBranch className="h-3 w-3 text-neon-green/60 flex-shrink-0" />
               <span className="font-mono text-xs bg-neon-green/8 border border-neon-green/20 px-2 py-0.5 rounded-sm text-neon-green/80">
                 {gitInfo.branch}
               </span>
-              {gitInfo.commit_hash && (
+              {!isDokploy && gitInfo.commit_hash && (
                 <span className="font-mono text-[10px] text-muted-foreground/40">{gitInfo.commit_hash}</span>
               )}
-              {gitInfo.commit_message && (
+              {!isDokploy && gitInfo.commit_message && (
                 <span className="text-xs text-muted-foreground/50 truncate max-w-[240px] sm:max-w-[300px]">{gitInfo.commit_message}</span>
+              )}
+              {isDokploy && gitInfo.git_remote && (
+                <span className="font-mono text-[10px] text-neon-cyan/40 truncate max-w-[240px] sm:max-w-[300px]">{gitInfo.git_remote}</span>
               )}
             </div>
           )}
@@ -406,10 +419,12 @@ export default function ServiceDetailPage({ params }: PageProps) {
 
         {/* Action buttons — wrap on mobile */}
         <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:shrink-0">
-          <Button variant="outline" size="sm" onClick={handleGitPull} disabled={gitPulling}>
-            <RefreshCw className={`h-3.5 w-3.5 mr-1 ${gitPulling ? "animate-spin" : ""}`} />
-            {gitPulling ? "Pulling..." : "Git Pull"}
-          </Button>
+          {!isDokploy && (
+            <Button variant="outline" size="sm" onClick={handleGitPull} disabled={gitPulling}>
+              <RefreshCw className={`h-3.5 w-3.5 mr-1 ${gitPulling ? "animate-spin" : ""}`} />
+              {gitPulling ? "Pulling..." : "Git Pull"}
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={openEdit}>
             <Pencil className="h-3.5 w-3.5 mr-1" />
             Edit

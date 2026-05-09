@@ -1,10 +1,16 @@
 package handler
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 
+	"github.com/ghulammuzz/zzpeo/api/internal/dokploy"
+	"github.com/ghulammuzz/zzpeo/api/internal/model"
 	"github.com/ghulammuzz/zzpeo/api/internal/repository"
+	"github.com/ghulammuzz/zzpeo/api/internal/service"
 	appssh "github.com/ghulammuzz/zzpeo/api/internal/ssh"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -43,13 +49,39 @@ func (h *GitHandler) GitInfo(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// Dokploy servers manage git internally — skip SSH git queries when no SSH key is set.
-	if srv.AuthType == "dokploy" && len(srv.SSHKeyEnc) == 0 {
-		return c.JSON(fiber.Map{
-			"branch":         "",
-			"commit_hash":    "",
-			"commit_message": "",
-		})
+	// Dokploy: fetch branch + remote from Dokploy API instead of SSH git.
+	if srv.AuthType == "dokploy" {
+		tokenBytes, tokenErr := h.ks.Decrypt(srv.PasswordEnc, srv.ID)
+		if tokenErr == nil {
+			baseURL := fmt.Sprintf("http://%s:%d", srv.Host, srv.Port)
+			dk := dokploy.NewClient(baseURL, string(tokenBytes))
+
+			var appID string
+			if len(svc.LogConfig) > 0 && string(svc.LogConfig) != "null" {
+				var lc struct{ ApplicationID string `json:"application_id"` }
+				_ = json.Unmarshal(svc.LogConfig, &lc)
+				appID = lc.ApplicationID
+			}
+			if appID == "" && svc.DeployType == model.DeployDokploy {
+				var dc service.DokployDeployConfig
+				_ = json.Unmarshal(svc.DeployConfig, &dc)
+				appID = dc.ApplicationID
+			}
+
+			if appID != "" {
+				app, appErr := dk.GetApplication(context.Background(), appID)
+				if appErr == nil {
+					branch, remote := app.GitInfo()
+					return c.JSON(fiber.Map{
+						"branch":         branch,
+						"commit_hash":    "",
+						"commit_message": remote,
+						"git_remote":     remote,
+					})
+				}
+			}
+		}
+		return c.JSON(fiber.Map{"branch": "", "commit_hash": "", "commit_message": ""})
 	}
 
 	client, err := appssh.NewClientFromServer(srv, h.ks)
