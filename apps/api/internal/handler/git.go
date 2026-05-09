@@ -43,6 +43,15 @@ func (h *GitHandler) GitInfo(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	// Dokploy servers manage git internally — skip SSH git queries when no SSH key is set.
+	if srv.AuthType == "dokploy" && len(srv.SSHKeyEnc) == 0 {
+		return c.JSON(fiber.Map{
+			"branch":         "",
+			"commit_hash":    "",
+			"commit_message": "",
+		})
+	}
+
 	client, err := appssh.NewClientFromServer(srv, h.ks)
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "SSH connect failed: " + err.Error()})
@@ -101,6 +110,11 @@ func (h *GitHandler) GitPull(c *fiber.Ctx) error {
 	srv, err := h.serverRepo.GetByIDWithCredentials(c.Context(), svc.ServerID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// Dokploy manages deployments via its own API — git pull via SSH not applicable.
+	if srv.AuthType == "dokploy" && len(srv.SSHKeyEnc) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Git Pull not available for Dokploy services — trigger a new deployment instead"})
 	}
 
 	client, err := appssh.NewClientFromServer(srv, h.ks)
