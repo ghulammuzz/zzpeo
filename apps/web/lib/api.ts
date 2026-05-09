@@ -213,6 +213,10 @@ export const api = {
       post<{ fingerprint: string; latency_ms: number }>(
         `/environments/${envId}/servers/${serverId}/test-connection`, body,
       ),
+    testRawSSH: (body: {
+      host: string; port: number; user: string; auth_type: string;
+      ssh_key?: string; password?: string; passphrase?: string;
+    }) => post<{ fingerprint: string; latency_ms: number }>("/servers/test-ssh", body),
   },
   services: {
     list: (serverId: string) => get<Service[]>(`/servers/${serverId}/services`),

@@ -217,6 +217,54 @@ func buildAuthMethod(s *model.Server, ks *KeyStore) (gossh.AuthMethod, error) {
 	}
 }
 
+// TestRawConnection dials a host with raw (unencrypted) credentials — used to
+// verify SSH access before a server record is created in the database.
+func TestRawConnection(host string, port int, user, authType, sshKey, password, passphrase string) (fp string, latency time.Duration, err error) {
+	var authMethod gossh.AuthMethod
+	switch authType {
+	case "key":
+		pemBytes := []byte(sshKey)
+		signer, parseErr := gossh.ParsePrivateKey(pemBytes)
+		if parseErr != nil {
+			var missingErr *gossh.PassphraseMissingError
+			if errors.As(parseErr, &missingErr) && passphrase != "" {
+				signer, parseErr = gossh.ParsePrivateKeyWithPassphrase(pemBytes, []byte(passphrase))
+				if parseErr != nil {
+					return "", 0, fmt.Errorf("parse private key with passphrase: %w", parseErr)
+				}
+			} else {
+				return "", 0, fmt.Errorf("parse private key: %w", parseErr)
+			}
+		}
+		authMethod = gossh.PublicKeys(signer)
+	case "password":
+		authMethod = gossh.Password(password)
+	default:
+		return "", 0, fmt.Errorf("unsupported auth_type for test: %s", authType)
+	}
+
+	var capturedFP string
+	config := &gossh.ClientConfig{
+		User: user,
+		Auth: []gossh.AuthMethod{authMethod},
+		HostKeyCallback: func(_ string, _ net.Addr, key gossh.PublicKey) error {
+			capturedFP = fingerprint(key)
+			return nil
+		},
+		Timeout: 15 * time.Second,
+	}
+
+	addr := fmt.Sprintf("%s:%d", host, port)
+	start := time.Now()
+	client, dialErr := gossh.Dial("tcp", addr, config)
+	latency = time.Since(start)
+	if dialErr != nil {
+		return "", latency, fmt.Errorf("SSH dial failed: %w", dialErr)
+	}
+	client.Close()
+	return capturedFP, latency, nil
+}
+
 // fingerprint returns a "SHA256:<base64>" string matching the OpenSSH format.
 func fingerprint(key gossh.PublicKey) string {
 	hash := sha256.Sum256(key.Marshal())

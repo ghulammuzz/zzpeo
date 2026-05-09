@@ -346,3 +346,37 @@ func (h *ServerHandler) TestConnection(c *fiber.Ctx) error {
 		"confirmed":   req.Confirm,
 	})
 }
+
+type testRawSSHRequest struct {
+	Host       string `json:"host"`
+	Port       int    `json:"port"`
+	User       string `json:"user"`
+	AuthType   string `json:"auth_type"`
+	SSHKey     string `json:"ssh_key"`
+	Password   string `json:"password"`
+	Passphrase string `json:"passphrase"`
+}
+
+// TestRawSSH handles POST /servers/test-ssh
+// Tests SSH connectivity with raw (unencrypted) credentials before a server is created.
+func (h *ServerHandler) TestRawSSH(c *fiber.Ctx) error {
+	var req testRawSSHRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+	if req.Host == "" || req.User == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "host and user are required"})
+	}
+	if req.Port == 0 {
+		req.Port = 22
+	}
+
+	fp, latency, err := appssh.TestRawConnection(req.Host, req.Port, req.User, req.AuthType, req.SSHKey, req.Password, req.Passphrase)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(fiber.Map{
+		"fingerprint": fp,
+		"latency_ms":  latency.Milliseconds(),
+	})
+}

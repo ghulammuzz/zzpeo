@@ -45,10 +45,17 @@ export function ServerForm({
   const [keyNeedsPassphrase, setKeyNeedsPassphrase] = useState(false);
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [testingRaw, setTestingRaw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<{
     fingerprint: string;
     latency_ms: number;
+  } | null>(null);
+  const [rawTestResult, setRawTestResult] = useState<{
+    ok: boolean;
+    fingerprint?: string;
+    latency_ms?: number;
+    error?: string;
   } | null>(null);
   const [showModal, setShowModal] = useState(false);
   // Created server ID for test connection
@@ -56,6 +63,27 @@ export function ServerForm({
 
   const setField = (key: string, value: string | boolean) => {
     setForm((f) => ({ ...f, [key]: value }));
+  };
+
+  const handleTestRaw = async () => {
+    setTestingRaw(true);
+    setRawTestResult(null);
+    try {
+      const result = await api.servers.testRawSSH({
+        host: form.host,
+        port: parseInt(form.port) || 22,
+        user: form.user,
+        auth_type: form.auth_type === "dokploy" ? "key" : form.auth_type,
+        ssh_key: form.auth_type === "key" ? form.ssh_key : undefined,
+        password: form.auth_type === "password" ? form.password : undefined,
+        passphrase: form.passphrase || undefined,
+      });
+      setRawTestResult({ ok: true, ...result });
+    } catch (err) {
+      setRawTestResult({ ok: false, error: err instanceof Error ? err.message : "Connection failed" });
+    } finally {
+      setTestingRaw(false);
+    }
   };
 
   // Detect whether a PEM/OpenSSH private key requires a passphrase.
@@ -374,14 +402,51 @@ export function ServerForm({
           </div>
         )}
 
-        <div className="flex gap-3 pt-2">
+        {/* Pre-flight SSH test — only for SSH auth types */}
+        {form.auth_type !== "dokploy" && (
+          <div className="space-y-2 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={testingRaw || !form.host || !form.user}
+              onClick={handleTestRaw}
+              className="w-full"
+            >
+              <Zap className={`h-4 w-4 mr-2 ${testingRaw ? "animate-pulse" : ""}`} />
+              {testingRaw ? "Testing SSH..." : "Test SSH Connection"}
+            </Button>
+
+            {rawTestResult && (
+              <div className={`rounded-sm border px-3 py-2.5 text-xs font-mono ${
+                rawTestResult.ok
+                  ? "border-neon-green/30 bg-neon-green/5 text-neon-green/80"
+                  : "border-neon-magenta/30 bg-neon-magenta/5 text-neon-magenta/80"
+              }`}>
+                {rawTestResult.ok ? (
+                  <>
+                    <p className="font-semibold mb-1">// ✓ SSH connection successful</p>
+                    <p>fingerprint: {rawTestResult.fingerprint}</p>
+                    <p>latency: {rawTestResult.latency_ms}ms</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-semibold mb-1">// ✗ Connection failed</p>
+                    <p className="break-all">{rawTestResult.error}</p>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-3 pt-1">
           <Button type="submit" disabled={loading || testing}>
-            <Zap className="h-4 w-4 mr-2" />
+            <Server className="h-4 w-4 mr-2" />
             {loading || testing
               ? "Saving..."
               : form.auth_type === "dokploy"
                 ? "Save Dokploy Server"
-                : "Create & Test Connection"}
+                : "Add Server"}
           </Button>
           <Button
             type="button"
