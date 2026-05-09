@@ -50,7 +50,13 @@ func NewClientFromServer(s *model.Server, ks *KeyStore) (*Client, error) {
 		Timeout:         15 * time.Second,
 	}
 
-	addr := fmt.Sprintf("%s:%d", s.Host, s.Port)
+	// Dokploy servers store the Dokploy API port (e.g. 3000) in Port.
+	// SSH always runs on port 22 for these servers.
+	port := s.Port
+	if s.AuthType == "dokploy" {
+		port = 22
+	}
+	addr := fmt.Sprintf("%s:%d", s.Host, port)
 	client, err := gossh.Dial("tcp", addr, config)
 	if err != nil {
 		return nil, fmt.Errorf("SSH dial failed: %w", err)
@@ -100,7 +106,11 @@ func TestConnection(s *model.Server, ks *KeyStore) (fp string, latency time.Dura
 		Timeout: 15 * time.Second,
 	}
 
-	addr := fmt.Sprintf("%s:%d", s.Host, s.Port)
+	port := s.Port
+	if s.AuthType == "dokploy" {
+		port = 22
+	}
+	addr := fmt.Sprintf("%s:%d", s.Host, port)
 	start := time.Now()
 	client, err := gossh.Dial("tcp", addr, config)
 	latency = time.Since(start)
@@ -211,6 +221,21 @@ func buildAuthMethod(s *model.Server, ks *KeyStore) (gossh.AuthMethod, error) {
 			return nil, fmt.Errorf("decrypt password: %w", err)
 		}
 		return gossh.Password(string(pass)), nil
+
+	case "dokploy":
+		// Dokploy servers optionally store an SSH key for log streaming.
+		if len(s.SSHKeyEnc) == 0 {
+			return nil, fmt.Errorf("no SSH key stored for this Dokploy server — add one via Edit Server")
+		}
+		pemBytes, err := ks.Decrypt(s.SSHKeyEnc, s.ID)
+		if err != nil {
+			return nil, fmt.Errorf("decrypt ssh key: %w", err)
+		}
+		signer, err := gossh.ParsePrivateKey(pemBytes)
+		if err != nil {
+			return nil, fmt.Errorf("parse private key: %w", err)
+		}
+		return gossh.PublicKeys(signer), nil
 
 	default:
 		return nil, fmt.Errorf("unknown auth_type: %s", s.AuthType)

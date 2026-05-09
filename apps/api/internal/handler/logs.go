@@ -116,10 +116,10 @@ func (h *LogsHandler) StreamServiceLogs(c *fiber.Ctx) error {
 		c.Set("X-Accel-Buffering", "no")
 
 		// Preferred: if the Dokploy server has an SSH key stored, use SSH +
-		// `docker service logs` which works for Swarm containers.
+		// `docker logs -f <full_container_name>` (works for Swarm task containers).
 		if len(srv.SSHKeyEnc) > 0 {
 			c.Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
-				// Resolve Swarm service name from Dokploy API.
+				// Resolve app name from Dokploy API, then find the running container.
 				app, err := dk.GetApplication(ctx, appID)
 				if err != nil {
 					fmt.Fprintf(w, "event: error\ndata: resolve app failed: %s\n\n", err.Error())
@@ -136,11 +136,22 @@ func (h *LogsHandler) StreamServiceLogs(c *fiber.Ctx) error {
 					return
 				}
 
-				// Build the SSH log command using docker service logs (Swarm-aware).
-				logCmd := fmt.Sprintf(
-					"docker service logs -f --no-task-ids --raw --tail=%d %s 2>&1",
-					tail, appName,
-				)
+				// Find the full container name (e.g. shortie-app.1.abc123) via docker.getContainers.
+				// docker logs -f <full_name> works for Swarm task containers directly.
+				_, fullContainerName, findErr := dk.FindContainerID(ctx, appName)
+				logTarget := appName // fallback: use service name with docker service logs
+				useServiceLogs := true
+				if findErr == nil && fullContainerName != "" {
+					logTarget = fullContainerName
+					useServiceLogs = false
+				}
+
+				var logCmd string
+				if useServiceLogs {
+					logCmd = fmt.Sprintf("docker service logs -f --no-task-ids --raw --tail=%d %s 2>&1", tail, logTarget)
+				} else {
+					logCmd = fmt.Sprintf("docker logs -f --tail=%d %s 2>&1", tail, logTarget)
+				}
 
 				sshClient, err := appssh.NewClientFromServer(srv, h.ks)
 				if err != nil {
@@ -151,14 +162,12 @@ func (h *LogsHandler) StreamServiceLogs(c *fiber.Ctx) error {
 				defer sshClient.Close()
 
 				exec := appssh.NewExecutor(sshClient)
-				runAsUser := ""
-				if svc.RunAsUser != nil {
-					runAsUser = *svc.RunAsUser
-				}
 				lines := make(chan string, 512)
 				done := make(chan error, 1)
 				go func() {
-					done <- exec.RunCommands(ctx, svc.Workdir, runAsUser, []string{logCmd}, lines)
+					// Use root workdir "/" — docker logs/service logs don't need workdir.
+					// runAsUser="" — Dokploy server user (root) can run docker directly.
+					done <- exec.RunCommands(ctx, "/", "", []string{logCmd}, lines)
 				}()
 				for {
 					select {
