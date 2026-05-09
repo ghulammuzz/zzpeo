@@ -120,14 +120,56 @@ func (c *Client) GetApplication(ctx context.Context, applicationID string) (*App
 	return &app, nil
 }
 
+// Container is a Docker container as returned by docker.getContainers.
+type Container struct {
+	ID    string   `json:"Id"`
+	Names []string `json:"Names"` // e.g. ["/shortie-webhook-csxlc3.1.abc123"]
+}
+
+// GetContainers returns all running containers from the Dokploy instance.
+func (c *Client) GetContainers(ctx context.Context) ([]Container, error) {
+	data, status, err := c.do(ctx, http.MethodGet, "/api/docker.getContainers", nil)
+	if err != nil {
+		return nil, err
+	}
+	if status >= 400 {
+		return nil, fmt.Errorf("docker.getContainers returned HTTP %d: %s", status, string(data))
+	}
+	var containers []Container
+	if err := json.Unmarshal(data, &containers); err != nil {
+		return nil, fmt.Errorf("parse containers: %w", err)
+	}
+	return containers, nil
+}
+
+// FindContainerID lists all containers and returns the ID of the first one
+// whose name starts with prefix (Docker Swarm names the task container
+// "<service_name>.<replica>.<task_id>", so prefix = app/service name).
+func (c *Client) FindContainerID(ctx context.Context, prefix string) (string, string, error) {
+	containers, err := c.GetContainers(ctx)
+	if err != nil {
+		return "", "", err
+	}
+	for _, ct := range containers {
+		for _, name := range ct.Names {
+			// Docker prepends "/" to container names.
+			clean := strings.TrimPrefix(name, "/")
+			if clean == prefix || strings.HasPrefix(clean, prefix+".") || strings.HasPrefix(clean, prefix+"_") {
+				return ct.ID, clean, nil
+			}
+		}
+	}
+	return "", "", fmt.Errorf("no running container found with name prefix %q", prefix)
+}
+
 // ContainerLogs holds a raw log string from Dokploy's docker log endpoint.
 type ContainerLogs struct {
 	Logs string `json:"logs"`
 }
 
-// GetContainerLogs fetches recent logs for a container by name or ID.
-func (c *Client) GetContainerLogs(ctx context.Context, containerName string, tail int) (string, error) {
-	path := fmt.Sprintf("/api/docker.getContainerLogs?containerId=%s&tail=%d", containerName, tail)
+// GetContainerLogs fetches recent logs for a container by its ID.
+func (c *Client) GetContainerLogs(ctx context.Context, containerID string, tail int) (string, error) {
+	path := fmt.Sprintf("/api/docker.getContainerLogs?containerId=%s&tail=%d", containerID, tail)
 	data, status, err := c.do(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return "", err
@@ -135,39 +177,45 @@ func (c *Client) GetContainerLogs(ctx context.Context, containerName string, tai
 	if status >= 400 {
 		return "", fmt.Errorf("docker.getContainerLogs returned HTTP %d: %s", status, string(data))
 	}
-	// Response may be a plain string or {"logs":"..."}
+	// Response may be {"logs":"..."} or raw text.
 	var cl ContainerLogs
 	if json.Unmarshal(data, &cl) == nil && cl.Logs != "" {
 		return cl.Logs, nil
 	}
-	// Fallback: treat body as raw log text
 	return strings.TrimSpace(string(data)), nil
 }
 
 // StreamContainerLogs resolves the running container for applicationID via the
-// Dokploy API, then polls container logs every 2 s and calls onLine for each
-// new line. Blocks until ctx is cancelled.
+// Dokploy API (listing containers and prefix-matching against the app name),
+// then polls container logs every 2 s and calls onLine for each new line.
+// Blocks until ctx is cancelled.
 func (c *Client) StreamContainerLogs(ctx context.Context, applicationID string, tail int, onLine func(string)) error {
 	app, err := c.GetApplication(ctx, applicationID)
 	if err != nil {
 		return fmt.Errorf("resolve application: %w", err)
 	}
 
-	// Prefer ContainerName if populated; fall back to AppName.
-	containerName := app.ContainerName
-	if containerName == "" {
-		containerName = app.AppName
+	// appName is the Dokploy/Swarm service name prefix used to match the container.
+	appName := app.AppName
+	if appName == "" {
+		appName = app.ContainerName
 	}
-	if containerName == "" {
-		return fmt.Errorf("dokploy: could not resolve container name for application %s", applicationID)
+	if appName == "" {
+		return fmt.Errorf("dokploy: could not resolve app name for application %s", applicationID)
 	}
 
-	onLine(fmt.Sprintf("// resolved container: %s", containerName))
+	// Resolve the full Docker container ID by listing containers and prefix-matching.
+	containerID, fullName, err := c.FindContainerID(ctx, appName)
+	if err != nil {
+		return fmt.Errorf("find container: %w", err)
+	}
+	onLine(fmt.Sprintf("// container: %s", fullName))
 
 	// Fetch initial batch.
-	prev, err := c.GetContainerLogs(ctx, containerName, tail)
+	prev, err := c.GetContainerLogs(ctx, containerID, tail)
 	if err != nil {
 		onLine(fmt.Sprintf("// log fetch error: %v", err))
+		prev = ""
 	} else {
 		for _, line := range strings.Split(prev, "\n") {
 			line = strings.TrimRight(line, "\r")
@@ -188,7 +236,7 @@ func (c *Client) StreamContainerLogs(ctx context.Context, applicationID string, 
 		case <-ticker.C:
 		}
 
-		logs, err := c.GetContainerLogs(ctx, containerName, tail)
+		logs, err := c.GetContainerLogs(ctx, containerID, tail)
 		if err != nil {
 			onLine(fmt.Sprintf("// poll error: %v", err))
 			continue
