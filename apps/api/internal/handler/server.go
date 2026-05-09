@@ -63,11 +63,18 @@ func (h *ServerHandler) Create(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
-	if req.Name == "" || req.Host == "" || req.User == "" || req.AuthType == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "name, host, user, and auth_type are required"})
+	if req.Name == "" || req.Host == "" || req.AuthType == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "name, host, and auth_type are required"})
+	}
+	if req.AuthType != "dokploy" && req.User == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "user is required for SSH servers"})
 	}
 	if req.Port == 0 {
 		req.Port = 22
+	}
+	// Dokploy servers default to port 3000.
+	if req.AuthType == "dokploy" && req.Port == 22 {
+		req.Port = 3000
 	}
 
 	// Reject duplicate host within the same environment.
@@ -89,8 +96,12 @@ func (h *ServerHandler) Create(c *fiber.Ctx) error {
 		if req.Password == "" {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "password is required for auth_type=password"})
 		}
+	case "dokploy":
+		if req.Password == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "password (API token) is required for auth_type=dokploy"})
+		}
 	default:
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "auth_type must be 'key' or 'password'"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "auth_type must be 'key', 'password', or 'dokploy'"})
 	}
 
 	// Step 1: Insert the server record without credentials to obtain its DB-generated UUID.
@@ -120,7 +131,8 @@ func (h *ServerHandler) Create(c *fiber.Ctx) error {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to encrypt passphrase"})
 			}
 		}
-	case "password":
+	case "password", "dokploy":
+		// Dokploy stores its API token in the same password_enc column.
 		passwordEnc, err = h.ks.Encrypt([]byte(req.Password), srv.ID)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to encrypt password"})
@@ -299,6 +311,15 @@ func (h *ServerHandler) TestConnection(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "server not found"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// Dokploy servers use HTTP API — no SSH test.
+	if srv.AuthType == "dokploy" {
+		return c.JSON(fiber.Map{
+			"fingerprint": "dokploy-api",
+			"latency_ms":  0,
+			"confirmed":   false,
+		})
 	}
 
 	fp, latency, err := appssh.TestConnection(srv, h.ks)
