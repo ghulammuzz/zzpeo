@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
 import { Plus, Terminal, FileCode2, ArrowRight, Pencil, Trash2, GitBranch, RefreshCw } from "lucide-react"
@@ -42,6 +43,7 @@ export default function ServerDetailPage({ params }: PageProps) {
   const [srvHost, setSrvHost] = useState("")
   const [srvPort, setSrvPort] = useState("")
   const [srvUser, setSrvUser] = useState("")
+  const [srvSshKey, setSrvSshKey] = useState("")
   const [savingServer, setSavingServer] = useState(false)
 
   // Delete server
@@ -105,6 +107,7 @@ export default function ServerDetailPage({ params }: PageProps) {
         host: srvHost,
         port: parseInt(srvPort) || server.port,
         user: srvUser,
+        ...(srvSshKey ? { ssh_key: srvSshKey } : {}),
       })
       toast({ title: "Server updated" })
       setEditingServer(false)
@@ -300,11 +303,30 @@ export default function ServerDetailPage({ params }: PageProps) {
                 <Input value={srvPort} onChange={(e) => setSrvPort(e.target.value)} type="number" className="font-mono" />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>SSH User</Label>
-              <Input value={srvUser} onChange={(e) => setSrvUser(e.target.value)} className="font-mono" />
-            </div>
-            <p className="text-xs text-muted-foreground">SSH credentials are preserved. Re-add the server to rotate keys.</p>
+            {server.auth_type !== "dokploy" && (
+              <div className="space-y-2">
+                <Label>SSH User</Label>
+                <Input value={srvUser} onChange={(e) => setSrvUser(e.target.value)} className="font-mono" />
+              </div>
+            )}
+            {server.auth_type === "dokploy" && (
+              <div className="space-y-2">
+                <Label>
+                  SSH Private Key <span className="text-muted-foreground font-normal text-xs">(optional — for Docker Swarm log streaming)</span>
+                </Label>
+                <Textarea
+                  placeholder={"-----BEGIN OPENSSH PRIVATE KEY-----\n...\n-----END OPENSSH PRIVATE KEY-----"}
+                  value={srvSshKey}
+                  onChange={(e) => setSrvSshKey(e.target.value)}
+                  rows={5}
+                  className="font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">Leave blank to keep existing key. Set to enable live log streaming via SSH.</p>
+              </div>
+            )}
+            {server.auth_type !== "dokploy" && (
+              <p className="text-xs text-muted-foreground">SSH credentials are preserved. Re-add the server to rotate keys.</p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingServer(false)}>Cancel</Button>

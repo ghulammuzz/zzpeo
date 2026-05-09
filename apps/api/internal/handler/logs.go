@@ -115,6 +115,80 @@ func (h *LogsHandler) StreamServiceLogs(c *fiber.Ctx) error {
 		c.Set("Transfer-Encoding", "chunked")
 		c.Set("X-Accel-Buffering", "no")
 
+		// Preferred: if the Dokploy server has an SSH key stored, use SSH +
+		// `docker service logs` which works for Swarm containers.
+		if len(srv.SSHKeyEnc) > 0 {
+			c.Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+				// Resolve Swarm service name from Dokploy API.
+				app, err := dk.GetApplication(ctx, appID)
+				if err != nil {
+					fmt.Fprintf(w, "event: error\ndata: resolve app failed: %s\n\n", err.Error())
+					_ = w.Flush()
+					return
+				}
+				appName := app.AppName
+				if appName == "" {
+					appName = app.ContainerName
+				}
+				if appName == "" {
+					fmt.Fprintf(w, "event: error\ndata: could not resolve app name for %s\n\n", appID)
+					_ = w.Flush()
+					return
+				}
+
+				// Build the SSH log command using docker service logs (Swarm-aware).
+				logCmd := fmt.Sprintf(
+					"docker service logs -f --no-task-ids --raw --tail=%d %s 2>&1",
+					tail, appName,
+				)
+
+				sshClient, err := appssh.NewClientFromServer(srv, h.ks)
+				if err != nil {
+					fmt.Fprintf(w, "event: error\ndata: SSH connect failed: %s\n\n", err.Error())
+					_ = w.Flush()
+					return
+				}
+				defer sshClient.Close()
+
+				exec := appssh.NewExecutor(sshClient)
+				runAsUser := ""
+				if svc.RunAsUser != nil {
+					runAsUser = *svc.RunAsUser
+				}
+				lines := make(chan string, 512)
+				done := make(chan error, 1)
+				go func() {
+					done <- exec.RunCommands(ctx, svc.Workdir, runAsUser, []string{logCmd}, lines)
+				}()
+				for {
+					select {
+					case line, ok := <-lines:
+						if !ok {
+							return
+						}
+						fmt.Fprintf(w, "event: log\ndata: %s\n\n", line)
+						_ = w.Flush()
+					case runErr := <-done:
+						for {
+							select {
+							case line := <-lines:
+								fmt.Fprintf(w, "event: log\ndata: %s\n\n", line)
+								_ = w.Flush()
+							default:
+								if runErr != nil && ctx.Err() == nil {
+									fmt.Fprintf(w, "event: error\ndata: %s\n\n", runErr.Error())
+									_ = w.Flush()
+								}
+								return
+							}
+						}
+					}
+				}
+			}))
+			return nil
+		}
+
+		// Fallback: poll Dokploy API (works for non-Swarm Docker containers).
 		c.Context().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 			streamErr := dk.StreamContainerLogs(ctx, appID, tail, func(line string) {
 				fmt.Fprintf(w, "event: log\ndata: %s\n\n", line)

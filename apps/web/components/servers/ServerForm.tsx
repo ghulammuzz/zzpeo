@@ -268,11 +268,11 @@ export function ServerForm({
               // Host = Dokploy instance URL · Port = 3000 (default) · API token stored encrypted
             </p>
             <div className="space-y-2">
-              <Label htmlFor="api_token">Dokploy API Token</Label>
+              <Label htmlFor="api_token">Dokploy API Token <span className="text-destructive">*</span></Label>
               <Input
                 id="api_token"
                 type="password"
-                placeholder="••••••••••••••••"
+                placeholder="fa_••••••••••••••••"
                 value={form.password}
                 onChange={(e) => setField("password", e.target.value)}
                 required
@@ -280,6 +280,22 @@ export function ServerForm({
               />
               <p className="text-xs text-muted-foreground">
                 Settings → Profile → API/CLI section in your Dokploy instance.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dokploy_ssh_key">
+                SSH Private Key <span className="text-muted-foreground font-normal">(optional — required for Docker Swarm log streaming)</span>
+              </Label>
+              <Textarea
+                id="dokploy_ssh_key"
+                placeholder={"-----BEGIN OPENSSH PRIVATE KEY-----\n...\n-----END OPENSSH PRIVATE KEY-----"}
+                value={form.ssh_key}
+                onChange={(e) => setField("ssh_key", e.target.value)}
+                rows={5}
+                className="font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                If set, live logs use SSH + <code className="bg-muted px-1 rounded">docker service logs</code> instead of Dokploy API (needed for Swarm deployments).
               </p>
             </div>
           </div>

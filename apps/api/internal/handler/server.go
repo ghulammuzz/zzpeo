@@ -137,6 +137,13 @@ func (h *ServerHandler) Create(c *fiber.Ctx) error {
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to encrypt password"})
 		}
+		// Dokploy servers may optionally provide an SSH key for log streaming.
+		if req.SSHKey != "" {
+			sshKeyEnc, err = h.ks.Encrypt([]byte(req.SSHKey), srv.ID)
+			if err != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to encrypt ssh key"})
+			}
+		}
 	}
 
 	// Step 3: Update the server row with the encrypted credential blobs.

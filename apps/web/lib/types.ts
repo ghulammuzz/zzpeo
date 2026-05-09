@@ -2,7 +2,7 @@ export type DeployType = "php" | "pm2" | "shell" | "docker" | "dokploy";
 export type DeployStatus = "pending" | "running" | "success" | "failed" | "cancelled";
 export type EnvVarDeployMode = "all" | "build_arg" | "runtime" | "both";
 export type EnvironmentType = "prod" | "stg" | "custom";
-export type AuthType = "key" | "password";
+export type AuthType = "key" | "password" | "dokploy";
 
 export interface Project {
   id: string;
